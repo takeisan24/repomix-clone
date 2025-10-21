@@ -76,7 +76,7 @@ export default function SocialProof() {
   const duplicatedPlatforms = [...platforms, ...platforms, ...platforms, ...platforms]
 
   return (
-    <section className="border-y border-border py-8 bg-muted/30">
+    <section className="border-y border-white/30 border-white[.03] py-8 bg-muted/30">
       <div className="container mx-auto px-4">
         <p className="text-center text-sm text-muted-foreground mb-6 font-medium">
           {t('socialProof')}

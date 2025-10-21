@@ -9,8 +9,8 @@ export default function UseCasesSection() {
 
   const useCases = t.raw('card') as Array<{ title: string; description: string[] }>; 
   return (
-    <section id="use-cases" className="bg-card/50 py-20 md:py-32">
-      <div className="container mx-auto px-4">
+    <section id="use-cases" className="py-20 md:py-32">
+      <div className="container mx-auto px-4 border border-white/30 bg-white/[.03] rounded-2xl p-8 md:p-16">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold mb-4 text-balance">{t('useCasesTitle')}</h2>
           <p className="text-xl text-muted-foreground text-pretty max-w-2xl mx-auto">

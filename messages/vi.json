@@ -29,7 +29,7 @@
     }
   },
   "Footer": {
-    "copyright": "© 2025 MarketAI, Inc. Mọi quyền được bảo lưu.",
+    "copyright": "© 2025 Omnia, Inc. Mọi quyền được bảo lưu.",
     "description": "Tự động hóa nội dung bằng AI cho mạng xã hội",
     "title": {
       "product": "Sản phẩm",
@@ -86,7 +86,7 @@
       }
     },
     "useCasesTitle": "Dành cho mọi nhà sáng tạo nội dung",
-    "useCasesSubtitle": "Dù bạn là nhà sáng tạo nội dung đơn lẻ hay doanh nghiệp nhỏ, MarketAI giúp bạn duy trì sự hiện diện nhất quán trên mạng xã hội",
+    "useCasesSubtitle": "Dù bạn là nhà sáng tạo nội dung đơn lẻ hay doanh nghiệp nhỏ, Omnia giúp bạn duy trì sự hiện diện nhất quán trên mạng xã hội",
     "card": [
       {
         "title": "Các nhà sáng tạo nội dung",
@@ -150,7 +150,7 @@
   },
   "PricingPage": {
     "headerTitle": "Chọn Gói Phù hợp với Sức sáng tạo của bạn",
-    "headerSubtitle": "Dù bạn mới bắt đầu hay đã là một agency chuyên nghiệp, MarketAI luôn có một gói được thiết kế riêng cho bạn. Bắt đầu miễn phí ngay hôm nay!",
+    "headerSubtitle": "Dù bạn mới bắt đầu hay đã là một agency chuyên nghiệp, Omnia luôn có một gói được thiết kế riêng cho bạn. Bắt đầu miễn phí ngay hôm nay!",
     "perMonth": "/ tháng",
     "featureOrder": [
       "credits",
@@ -283,7 +283,7 @@
       },
       {
         "question": "Sự khác biệt giữa \"Tạo Video AI\" và \"Xử lý Video\" là gì?",
-        "answer": "Tạo Video AI (20 Credits/lần): Bạn chỉ cần đưa ra ý tưởng (text), MarketAI sẽ tự viết kịch bản và tạo ra một video hoàn toàn mới cho bạn.\nXử lý Video (5 Credits/phút): Bạn đã có sẵn một video (tự quay, phỏng vấn...), MarketAI sẽ tự động thêm phụ đề, chèn cảnh minh họa, và biến nó thành một clip chuyên nghiệp."
+        "answer": "Tạo Video AI (20 Credits/lần): Bạn chỉ cần đưa ra ý tưởng (text), Omnia sẽ tự viết kịch bản và tạo ra một video hoàn toàn mới cho bạn.\nXử lý Video (5 Credits/phút): Bạn đã có sẵn một video (tự quay, phỏng vấn...), Omnia sẽ tự động thêm phụ đề, chèn cảnh minh họa, và biến nó thành một clip chuyên nghiệp."
       }
     ],
     "topUpTable": {

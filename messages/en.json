@@ -29,7 +29,7 @@
     }
   },
   "Footer": {
-    "copyright": "© 2025 MarketAI, Inc. All rights reserved.",
+    "copyright": "© 2025 Omina, Inc. All rights reserved.",
     "description": "AI-powered content automation for social media",
     "title": {
       "product": "Product",
@@ -86,7 +86,7 @@
       }
     },
     "useCasesTitle": "Built for every creator",
-    "useCasesSubtitle": "Whether you're a solo creator or a small business, MarketAI helps you maintain consistent social presence",
+    "useCasesSubtitle": "Whether you're a solo creator or a small business, Omnia helps you maintain consistent social presence",
     "card": [
       {
         "title": "Content Creators",
@@ -150,7 +150,7 @@
   },
   "PricingPage": {
     "headerTitle": "Choose the Right Plan for Your Creativity",
-    "headerSubtitle": "Whether you're just starting out or you're a professional agency, MarketAI has a plan designed for you. Start for free today!",
+    "headerSubtitle": "Whether you're just starting out or you're a professional agency, Omnia has a plan designed for you. Start for free today!",
     "perMonth": "/ month",
     "featureOrder": [
       "credits",
@@ -269,7 +269,7 @@
       },
       {
         "question": "What's the difference between \"AI Video Generation\" and \"Video Processing\"?",
-        "answer": "\"AI Video Generation\" (20 Credits/instance): You provide an idea (text), and MarketAI will write a script and generate a completely new video for you.\n\"Video Processing\" (5 Credits/minute): You already have a video (self-shot, interview...), and MarketAI will automatically add subtitles, insert illustrative B-roll, and turn it into a professional clip."
+        "answer": "\"AI Video Generation\" (20 Credits/instance): You provide an idea (text), and Omnia will write a script and generate a completely new video for you.\n\"Video Processing\" (5 Credits/minute): You already have a video (self-shot, interview...), and Omnia will automatically add subtitles, insert illustrative B-roll, and turn it into a professional clip."
       }
     ]
   },

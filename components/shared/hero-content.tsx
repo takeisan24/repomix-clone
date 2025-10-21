@@ -2,13 +2,20 @@
 
 import { Button } from "@/components/ui/button"
 import { Sparkles, ArrowRight, Play } from "lucide-react"
+import Image from "next/image"
 import {useTranslations} from 'next-intl'
 
 export default function HeroContent() {
   const t = useTranslations('HomePage.hero');
   return (
-    <section className="container mx-auto px-4 py-20 md:py-32">
-      <div className="max-w-4xl mx-auto text-center">
+    <section className="relative container mx-auto px-4 py-20 md:py-32 overflow-hidden">
+      <Image 
+        src = "/gradient-hero-bg.jpg"
+        alt="Gradient background"
+        layout="fill"
+        className="object-cover opacity-50 blur-2xl"
+      />
+      <div className="relative max-w-4xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm mb-6">
           <Sparkles className="h-4 w-4" />
           <span>{t('AI_powered')}</span>

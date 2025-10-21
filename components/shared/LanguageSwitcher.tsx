@@ -6,6 +6,7 @@ import {useTransition} from 'react'
 import { useLocale } from 'next-intl';
 import { useRouter, usePathname } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
 
 export default function LanguageSwitcher() {
     const [isPending, startTransition] = useTransition();
@@ -24,26 +25,40 @@ export default function LanguageSwitcher() {
   };
 
   return (
-    <div className="flex items-center space-x-1 border border-gray-600 rounded-lg p-1">
+    <div className="relative flex items-center space-x-1 border border-gray-600 rounded-lg p-1">
       <Button 
         size="sm"
-        variant={locale === 'vi' ? 'secondary' : 'ghost'}
-        className={`px-3 transition-opacity ${isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
+        variant='ghost'
+        className={`relative z-10 px-3 hover:bg-white/10 transition-opacity ${isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
         // Vô hiệu hóa nút khi đang chuyển đổi
         disabled={isPending} 
         onClick={() => switchLocale('vi')}
       >
         VI
+        {locale === 'vi' && (
+          <motion.div 
+            layoutId='active-language-highlight'
+            className='absolute inset-0 bg-primary rounded-md -z-10'
+            transition = {{type: 'spring', stiffness: 300, damping: 30}}
+          />
+        )}
       </Button>
       <Button 
         size="sm"
-        variant={locale === 'en' ? 'secondary' : 'ghost'}
-        className={`px-3 transition-opacity ${isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
+        variant='ghost'
+        className={`relative z-10 px-3 hover:bg-white/10 transition-opacity ${isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
         // Vô hiệu hóa nút khi đang chuyển đổi
         disabled={isPending}
         onClick={() => switchLocale('en')}
       >
         EN
+        {locale === 'en' && (
+          <motion.div 
+            layoutId='active-language-highlight'
+            className='absolute inset-0 bg-primary rounded-md -z-10'
+            transition = {{type: 'spring', stiffness: 300, damping: 30}}
+          />
+        )}
       </Button>
     </div>
   );

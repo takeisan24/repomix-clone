@@ -7,7 +7,8 @@ import { useTranslations } from "next-intl"
 export default function FeaturesGrid() {
   const t = useTranslations('HomePage');
   return (
-    <section id="features" className="container mx-auto px-4 py-20 md:py-32">
+    <section id="features" className="py-20 md:py-32">
+      <div className="container mx-auto px-4 border border-white/30 bg-white/[.03] rounded-2xl p-8 md:p=16">
       <div className="text-center mb-16">
         <h2 className="text-4xl md:text-5xl font-bold mb-4 text-balance">
           {t('featuresTitle')}
@@ -77,6 +78,7 @@ export default function FeaturesGrid() {
             {t('features.feature6.description')}
           </p>
         </Card>
+      </div>
       </div>
     </section>
   )

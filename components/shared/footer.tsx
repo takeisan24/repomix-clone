@@ -12,7 +12,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="h-5 w-5 text-primary" />
-              <span className="font-bold">MarketAI</span>
+              <span className="font-bold">Omnia</span>
             </div>
             <p className="text-sm text-muted-foreground">{t('description')}</p>
           </div>
