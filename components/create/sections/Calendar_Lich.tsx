@@ -1,25 +1,37 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { vietnameseMonths, vietnameseWeekdays, getDaysInMonth, getCalendarEventsForDay, CalendarEvent, SOCIAL_PLATFORMS, getPlatformIcon, needsInversion } from "@/lib"
 import { PlatformIcon } from "@/components/shared/PlatformIcon"
 
-interface CalendarSectionProps {
-  calendarEvents: Record<string, CalendarEvent[]>
-  onEventAdd?: (year: number, month: number, day: number, platform: string) => void
-  onClearAll?: () => void
-  onEventUpdate?: (oldYear: number, oldMonth: number, oldDay: number, oldEvent: CalendarEvent, newYear: number, newMonth: number, newDay: number, newTime?: string) => void
-  onEventDelete?: (year: number, month: number, day: number, event: CalendarEvent) => void
-}
+import { useCreatePageStore } from "@/store/createPageStore"; // <-- IMPORT STORE
+import { useShallow } from 'zustand/react/shallow'; // <-- IMPORT useShallow
+
 
 /**
  * Calendar section component for scheduling and viewing posts
  * Displays a monthly calendar with drag-and-drop functionality for social media platforms
  */
-export default function CalendarSection({ calendarEvents, onEventAdd, onClearAll, onEventUpdate, onEventDelete }: CalendarSectionProps) {
+export default function CalendarSection() {
+  // Lấy và sử dụng các trạng thái từ store với useShallow để tránh re-render không cần thiết
+  const { calendarEvents, 
+    addEvent,
+    updateEvent,
+    deleteEvent,
+    clearAllEvents} = useCreatePageStore(
+    useShallow((state) => ({
+      calendarEvents: state.calendarEvents,
+      addEvent: state.handleEventAdd,
+      updateEvent: state.handleEventUpdate,
+      deleteEvent: state.handleEventDelete,
+      clearAllEvents: state.handleClearCalendarEvents,
+      
+    }))
+  );
+
   const router = useRouter()
   const [currentMonth, setCurrentMonth] = useState<number>(new Date().getMonth())
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear())
@@ -49,12 +61,6 @@ export default function CalendarSection({ calendarEvents, onEventAdd, onClearAll
   const [editingMinute, setEditingMinute] = useState<number>(0);
   const [editingAmPm, setEditingAmPm] = useState<'AM' | 'PM'>('AM');
 
-  // Local mirror state for calendar events
-  const [localEvents, setLocalEvents] = useState<Record<string, CalendarEvent[]>>(calendarEvents);
-
-  useEffect(() => {
-    setLocalEvents(calendarEvents);
-  }, [calendarEvents]);
 
   // Helper to format time to 12-hour AM/PM
   const formatTimeTo12Hour = (timeStr: string | undefined): string => {
@@ -141,55 +147,12 @@ export default function CalendarSection({ calendarEvents, onEventAdd, onClearAll
     e.dataTransfer.dropEffect = e.dataTransfer.types.includes('application/json') ? 'move' : 'copy';
   }
 
-  const updateEventDate = useCallback((
-    oldYear: number, oldMonth: number, oldDay: number, oldEvent: CalendarEvent,
-    newYear: number, newMonth: number, newDay: number, newTime: string | undefined = undefined
-  ) => {
-    setLocalEvents(prevEvents => {
-      const oldKey = `${oldYear}-${oldMonth}-${oldDay}`
-      const newKey = `${newYear}-${newMonth}-${newDay}`
-      
-      const newLocalEvents = { ...prevEvents }
-
-      // Remove from old date
-      if (newLocalEvents[oldKey]) {
-        // Sử dụng id để tìm và xóa sự kiện cụ thể
-        newLocalEvents[oldKey] = newLocalEvents[oldKey].filter(ev => ev.id !== oldEvent.id)
-        if (newLocalEvents[oldKey].length === 0) {
-          delete newLocalEvents[oldKey]
-        }
-      }
-
-      // Add to new date or update
-      const updatedEvent = newTime !== undefined ? { ...oldEvent, time: newTime } : oldEvent;
-      newLocalEvents[newKey] = [...(newLocalEvents[newKey] || []), updatedEvent];
-      newLocalEvents[newKey].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-
-      if (onEventUpdate) {
-        onEventUpdate(oldYear, oldMonth, oldDay, oldEvent, newYear, newMonth, newDay, newTime);
-      } else {
-        try { localStorage.setItem('calendarEvents', JSON.stringify(newLocalEvents)); } catch (error) { console.error("Failed to update local storage:", error); }
-      }
-
-      return newLocalEvents;
-    });
-  }, [onEventUpdate]);
-
   const handleCalendarDrop = (e: React.DragEvent, day: number, year: number, month: number) => {
     e.preventDefault()
     
     const platform = e.dataTransfer.getData('text/plain')
     if (platform) {
-      const targetDate = new Date(year, month, day)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      if (targetDate.getTime() < today.getTime()) return
-      
-      if (onEventAdd) {
-        onEventAdd(year, month, day, platform)
-      } else {
-        console.warn("onEventAdd prop not provided. Cannot add event.")
-      }
+      addEvent(year, month, day, platform);
     } 
     else if (e.dataTransfer.types.includes('application/json')) {
       try {
@@ -197,7 +160,7 @@ export default function CalendarSection({ calendarEvents, onEventAdd, onClearAll
         
         if (draggedEvent) {
           const newTime = draggedEvent.time; 
-          updateEventDate(oldYear, oldMonth, oldDay, draggedEvent, year, month, day, newTime);
+          updateEvent(oldYear, oldMonth, oldDay, draggedEvent, year, month, day, draggedEvent.time);
         }
       } catch (error) {
         console.error("Error parsing dragged event data:", error);
@@ -246,7 +209,7 @@ export default function CalendarSection({ calendarEvents, onEventAdd, onClearAll
         const clickedKey = `${cellDate.getFullYear()}-${cellDate.getMonth()}-${dayNum}`;
         const isClicked = clickedDays.has(clickedKey);
         
-        const dayEvents = getCalendarEventsForDay(cellDate.getFullYear(), cellDate.getMonth(), dayNum, localEvents);
+        const dayEvents = getCalendarEventsForDay(cellDate.getFullYear(), cellDate.getMonth(), dayNum, calendarEvents);
         
         gridDays.push({
             dayNum,
@@ -326,32 +289,10 @@ export default function CalendarSection({ calendarEvents, onEventAdd, onClearAll
   // Centralized delete logic
   const handleDeleteEvent = () => {
     if (!showPopup) return;
-
     const { year, month, day, event: eventToDelete } = showPopup;
 
     // Call the parent handler to delete the event from the source of truth
-    if (onEventDelete) {
-        onEventDelete(year, month, day, eventToDelete);
-    } else {
-        // Fallback for when no parent handler is provided (e.g., local storage only mode)
-        const key = `${year}-${month}-${day}`;
-        setLocalEvents(prevEvents => {
-            const newLocalEvents = { ...prevEvents };
-            if (newLocalEvents[key]) {
-                // Sử dụng id để xóa chính xác sự kiện được chọn
-                newLocalEvents[key] = newLocalEvents[key].filter(ev => ev.id !== eventToDelete.id);
-                if (newLocalEvents[key].length === 0) {
-                    delete newLocalEvents[key];
-                }
-            }
-            try { 
-                localStorage.setItem('calendarEvents', JSON.stringify(newLocalEvents)); 
-            } catch (error) { 
-                console.error("Failed to delete from local storage (fallback):", error); 
-            }
-            return newLocalEvents;
-        });
-    }
+    deleteEvent(year, month, day, eventToDelete);
 
     setShowDeleteConfirm(false);
     setShowPopup(null);
@@ -378,7 +319,7 @@ export default function CalendarSection({ calendarEvents, onEventAdd, onClearAll
     if (!showPopup) return;
 
     const new24HourTime = convertAmPmTo24Hour(editingHour, editingMinute, editingAmPm);
-    updateEventDate(
+    updateEvent(
       showPopup.year, 
       showPopup.month, 
       showPopup.day, 
@@ -406,12 +347,7 @@ export default function CalendarSection({ calendarEvents, onEventAdd, onClearAll
 
   // Clear all events handler
   const handleClearAllEvents = () => {
-    setLocalEvents({}); 
-    if (onClearAll) {
-      onClearAll(); 
-    } else {
-      try { localStorage.removeItem('calendarEvents'); } catch (error) { console.error("Failed to clear local storage:", error); }
-    }
+    clearAllEvents();
   };
 
   return (
@@ -626,7 +562,7 @@ export default function CalendarSection({ calendarEvents, onEventAdd, onClearAll
                   const isToday = date.toDateString() === new Date().toDateString()
                   
                   // Get events for this day
-                  const dayEvents = getCalendarEventsForDay(year, month, dayNum, localEvents)
+                  const dayEvents = getCalendarEventsForDay(year, month, dayNum, calendarEvents)
                   
                   return (
                     <div

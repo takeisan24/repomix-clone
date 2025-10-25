@@ -10,46 +10,44 @@ import { PlatformIcon } from "@/components/shared/PlatformIcon"
 import { formatDate, formatTime } from "@/lib"
 
 
-interface FailedPost {
-  id: number
-  platform: string
-  content: string
-  date: string
-  time: string
-  error?: string
-  profileName?: string
-  profilePic?: string
-  url?: string
-}
+import { useCreatePageStore } from "@/store/createPageStore"
+import { useShallow } from 'zustand/react/shallow'
 
-interface FailedSectionProps {
-  failedPosts: FailedPost[]
-  onRetryPost: (id: number, rescheduleDate?: string, rescheduleTime?: string) => void
-  onDeletePost: (id: number) => void
-  onViewPost: (url: string) => void
-}
+type FailedPost = ReturnType<typeof useCreatePageStore.getState>['failedPosts'][0];
+
 
 /**
  * Failed section component for managing failed posts
  * Displays a list of failed posts with retry and management options
  */
-export default function FailedSection({ 
-  failedPosts, 
-  onRetryPost, 
-  onDeletePost, 
-  onViewPost 
-}: FailedSectionProps) {
+export default function FailedSection() {
+  // Zustand store for failed posts and actions
+  const { failedPosts, onRetryPost, onDeletePost, onViewPost } = useCreatePageStore(
+    useShallow((state) => ({
+      failedPosts: state.failedPosts,
+      onRetryPost: state.handleRetryPost,
+      onDeletePost: state.handleDeletePost,
+      onViewPost: state.handleViewPost,
+    }))
+  )
   // Filter state
   const { platformFilter, dateFilter, searchTerm, setPlatformFilter, setDateFilter, setSearchTerm } = usePostFilters()
-  const filteredPosts = useFilteredPosts(failedPosts, searchTerm, platformFilter, dateFilter)
+  // const filteredPosts = useFilteredPosts(failedPosts, searchTerm, platformFilter, dateFilter)
+  const filteredPosts = useFilteredPosts(
+    // Chúng ta cần tạm thời tạo một thuộc tính `time` để hook sắp xếp hoạt động đúng
+    failedPosts.map(p => ({ ...p, time: `${p.date}T${p.time}` })), 
+    searchTerm, 
+    platformFilter, 
+    dateFilter
+  );
 
-  // Modal state to show reason and confirm retry
+  // Modal and state management
   const [showReasonModal, setShowReasonModal] = useState(false)
-  const [selectedFailedPost, setSelectedFailedPost] = useState<FailedPost | null>(null)
   const [showLoadingModal, setShowLoadingModal] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
-  // Modal state to show post detail and error reason
   const [showDetailModal, setShowDetailModal] = useState(false)
+// Selected post for modals
+  const [selectedFailedPost, setSelectedFailedPost] = useState<FailedPost | null>(null)
   const [selectedDetailPost, setSelectedDetailPost] = useState<FailedPost | null>(null)
   // State for reschedule date and time
   const [rescheduleDate, setRescheduleDate] = useState("")
@@ -146,6 +144,41 @@ export default function FailedSection({
     setRescheduleDate("")
     setRescheduleTime("")
   }
+
+  const handleConfirmAndRetry = () => {
+    // Hàm này là ví dụ cho việc gom logic UI và gọi action từ store
+    const reason = getFailureReason(selectedFailedPost!);
+    if (reason.type === 'character_limit' || reason.type === 'policy') {
+      // Gọi action từ store
+      onRetryPost(selectedFailedPost!.id);
+      closeReason();
+      return;
+    }
+    setShowLoadingModal(true);
+    closeReason();
+    setTimeout(() => {
+      setShowLoadingModal(false);
+      // Gọi action từ store
+      onRetryPost(selectedFailedPost!.id);
+      setShowSuccessModal(true);
+    }, 1500);
+  };
+  
+  const handleConfirmReschedule = () => {
+      if (!rescheduleDate || !rescheduleTime) {
+          alert("Vui lòng chọn ngày và giờ đăng lại");
+          return;
+      }
+      setShowConfirmReschedule(false);
+      closeDetail();
+      setShowLoadingModal(true);
+      setTimeout(() => {
+          setShowLoadingModal(false);
+          // Gọi action từ store với tham số
+          onRetryPost(selectedDetailPost!.id, rescheduleDate, rescheduleTime);
+          setShowSuccessModal(true);
+      }, 1500);
+  };
 
   return (
     <>

@@ -5,32 +5,23 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { SearchIcon, PlayIcon, ScissorsIcon, FilmIcon } from "lucide-react"
 
-interface VideoProject {
-  id: string
-  title: string
-  thumbnail: string
-  duration: string
-  createdAt: string
-  status: 'processing' | 'completed' | 'failed'
-}
-
-interface VideosSectionProps {
-  videoProjects: VideoProject[]
-  onVideoUpload: () => void
-  onVideoEdit: (projectId: string) => void
-  onVideoDelete: (projectId: string) => void
-}
+import { useCreatePageStore } from "@/store/createPageStore"
+import { useShallow } from 'zustand/react/shallow'
 
 /**
  * Videos section component for managing video projects
  * Displays video creation tools and project management interface
  */
-export default function VideosSection({ 
-  videoProjects, 
-  onVideoUpload, 
-  onVideoEdit, 
-  onVideoDelete 
-}: VideosSectionProps) {
+export default function VideosSection() {
+  // Zustand store for video projects and actions
+  const { videoProjects, onVideoUpload, onVideoEdit } = useCreatePageStore(
+    useShallow((state) => ({
+      videoProjects: state.videoProjects,
+      onVideoUpload: state.handleVideoUpload,
+      onVideoEdit: state.handleVideoEdit,
+      onVideoDelete: state.handleVideoDelete,
+    }))
+  )
   const [searchTerm, setSearchTerm] = useState("")
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)

@@ -6,39 +6,24 @@ import { FilterBar } from "@/components/shared/filters/FilterBar"
 import { PlatformIcon } from "@/components/shared/PlatformIcon"
 import { formatDate, formatTime } from "@/lib"
 
-interface PublishedPost {
-  id: number
-  platform: string
-  content: string
-  time: string
-  status: string
-  url: string
-  profileName?: string
-  profilePic?: string
-  engagement?: {
-    likes: number
-    comments: number
-    shares: number
-  }
-}
-
-interface PublishedSectionProps {
-  publishedPosts: PublishedPost[]
-  onViewPost: (url: string) => void
-  onRetryPost: (id: number) => void
-  onDeletePost: (id: number) => void
-}
+import { useCreatePageStore } from "@/store/createPageStore"
+import { useShallow } from 'zustand/react/shallow'
 
 /**
  * Published section component for viewing published posts
  * Displays a list of published posts with filtering, searching, and management options
  */
-export default function PublishedSection({ 
-  publishedPosts, 
-  onViewPost, 
-  onRetryPost, 
-  onDeletePost 
-}: PublishedSectionProps) {
+
+export default function PublishedSection() {
+  // Zustand store for published posts and actions
+  const { publishedPosts, onViewPost } = useCreatePageStore(
+    useShallow((state) => ({
+      publishedPosts: state.publishedPosts,
+      onViewPost: state.handleViewPost,
+      onRetryPost: state.handleRetryPost,
+      onDeletePost: state.handleDeletePost,
+    }))
+  )
   const { platformFilter, dateFilter, searchTerm, setPlatformFilter, setDateFilter, setSearchTerm } = usePostFilters()
   const filteredPosts = useFilteredPosts(publishedPosts, searchTerm, platformFilter, dateFilter)
 
@@ -59,7 +44,7 @@ export default function PublishedSection({
   }
 
   // Compute fixed width for right column username so rows align
-  const getMaxProfileWidth = (posts: PublishedPost[]) => {
+  const getMaxProfileWidth = (posts: typeof publishedPosts) => {
     const maxLength = Math.max(
       ...posts.map(p => (getAccountsForPlatform(p.platform)[0]?.username?.length || 0))
     )

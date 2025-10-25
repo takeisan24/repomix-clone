@@ -6,33 +6,23 @@ import { FilterBar } from "@/components/shared/filters/FilterBar"
 import { PlatformIcon } from "@/components/shared/PlatformIcon"
 import { formatDate } from "@/lib"
 
-interface DraftPost {
-  id: number
-  platform: string
-  platformIcon?: string
-  content: string
-  time: string
-  status: string
-  media?: string[]
-}
+import { useCreatePageStore } from "@/store/createPageStore"
+import { useShallow } from 'zustand/react/shallow'
 
-interface DraftsSectionProps {
-  draftPosts: DraftPost[]
-  onEditDraft: (post: DraftPost) => void
-  onDeleteDraft: (id: number) => void
-  onPublishDraft: (id: number) => void
-}
 
 /**
  * Drafts section component for managing draft posts
  * Displays a list of draft posts with filtering, searching, and management options
  */
-export default function DraftsSection({ 
-  draftPosts, 
-  onEditDraft, 
-  onDeleteDraft, 
-  onPublishDraft 
-}: DraftsSectionProps) {
+export default function DraftsSection() {
+  const { draftPosts, onEditDraft, onDeleteDraft } = useCreatePageStore(
+    useShallow((state) => ({
+      draftPosts: state.draftPosts,
+      onEditDraft: state.handleEditDraft,
+      onDeleteDraft: state.handleDeleteDraft,
+      onPublishDraft: state.handlePublishDraft,
+    }))
+  )
   const { platformFilter, dateFilter, searchTerm, setPlatformFilter, setDateFilter, setSearchTerm } = usePostFilters()
   const filteredPosts = useFilteredPosts(draftPosts, searchTerm, platformFilter, dateFilter)
 

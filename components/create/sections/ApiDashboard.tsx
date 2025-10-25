@@ -4,41 +4,24 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BarChart3Icon, TrendingUpIcon, SparklesIcon } from "lucide-react"
 
-interface ApiStats {
-  apiCalls: number
-  successRate: number
-  rateLimit: {
-    used: number
-    total: number
-    resetTime: string
-  }
-}
+import { useCreatePageStore } from "@/store/createPageStore"
+import { useShallow } from 'zustand/react/shallow'
 
-interface ApiKey {
-  id: string
-  name: string
-  type: 'production' | 'development'
-  lastUsed: string
-  isActive: boolean
-}
-
-interface ApiDashboardSectionProps {
-  stats: ApiStats
-  apiKeys: ApiKey[]
-  onRegenerateKey: (keyId: string) => void
-  onCreateKey: () => void
-}
 
 /**
  * API Dashboard section component for monitoring API usage and managing keys
  * Displays API statistics, usage metrics, and key management interface
  */
-export default function ApiDashboardSection({ 
-  stats, 
-  apiKeys, 
-  onRegenerateKey, 
-  onCreateKey 
-}: ApiDashboardSectionProps) {
+export default function ApiDashboardSection() {
+  // Zustand store for API stats and actions
+  const { apiStats, apiKeys, onRegenerateKey, onCreateKey } = useCreatePageStore(
+    useShallow((state) => ({
+      apiStats: state.apiStats,
+      apiKeys: state.apiKeys,
+      onRegenerateKey: state.handleRegenerateKey,
+      onCreateKey: state.handleCreateKey,
+    }))
+  )
   return (
     <div className="w-full max-w-none mx-4 mt-4">
       <h2 className="text-2xl font-bold mb-6">API Dashboard</h2>
@@ -50,7 +33,7 @@ export default function ApiDashboardSection({
             <BarChart3Icon className="w-4 h-4 text-blue-400" />
             <span className="text-sm text-gray-400">API Calls</span>
           </div>
-          <div className="text-white text-2xl font-bold">{stats.apiCalls.toLocaleString()}</div>
+          <div className="text-white text-2xl font-bold">{apiStats.apiCalls.toLocaleString()}</div>
           <div className="text-sm text-green-400">+12% from last month</div>
         </Card>
         
@@ -59,7 +42,7 @@ export default function ApiDashboardSection({
             <TrendingUpIcon className="w-4 h-4 text-green-400" />
             <span className="text-sm text-gray-400">Success Rate</span>
           </div>
-          <div className="text-white text-2xl font-bold">{stats.successRate}%</div>
+          <div className="text-white text-2xl font-bold">{apiStats.successRate}%</div>
           <div className="text-sm text-green-400">+0.3% from last month</div>
         </Card>
         
@@ -69,10 +52,10 @@ export default function ApiDashboardSection({
             <span className="text-sm text-gray-400">Rate Limit</span>
           </div>
           <div className="text-white text-2xl font-bold">
-            {stats.rateLimit.used}/{stats.rateLimit.total}
+            {apiStats.rateLimit.used}/{apiStats.rateLimit.total}
           </div>
           <div className="text-sm text-gray-400">
-            Resets in {stats.rateLimit.resetTime}
+            Resets in {apiStats.rateLimit.resetTime}
           </div>
         </Card>
       </div>
