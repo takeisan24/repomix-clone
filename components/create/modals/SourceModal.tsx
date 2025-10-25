@@ -1,10 +1,11 @@
 // components/create/modals/SourceModal.tsx
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { UploadCloud as UploadCloudIcon } from 'lucide-react';
 import { X as CloseIcon } from 'lucide-react';
 
 import { useCreatePageStore } from '@/store/createPageStore';
@@ -27,33 +28,76 @@ export default function SourceModal() {
     const [selectedSourceType, setSelectedSourceType] = useState('text');
     const [sourceTextInput, setSourceTextInput] = useState('');
     const [sourceUrlInput, setSourceUrlInput] = useState('');
+    const [selectedFile, setSelectedFile] = useState<File | null>(null); // <-- State mới để lưu file
+    const [isUploading, setIsUploading] = useState(false); // <-- State mới cho trạng thái upload
     const [shouldSaveSource, setShouldSaveSource] = useState(true);
     const [advancedInstructions, setAdvancedInstructions] = useState('');
 
+    const fileInputRef = useRef<HTMLInputElement>(null); // Ref cho input file ẩn
+
     if (!isSourceModalOpen) return null;
 
-    const handleAddAndProceed = () => {
-        const value = selectedSourceType === 'text' ? sourceTextInput : sourceUrlInput;
-        if (!value.trim()) return;
-        
-        const source = {
-            type: selectedSourceType,
-            value,
-            label: value.length > 50 ? value.substring(0, 50) + '...' : value
-        };
-
-        if (shouldSaveSource) {
-            addSavedSource(source);
+    // Hàm xử lý khi người dùng chọn file
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setSelectedFile(file);
         }
-
-        // Đóng modal này và mở modal tiếp theo
-        setIsSourceModalOpen(false);
-        openCreateFromSourceModal(source);
-
-        // Reset form
-        setSourceTextInput('');
-        setSourceUrlInput('');
     };
+
+   // Hàm xử lý chính khi nhấn nút "Thêm"
+    const handleAdd = async () => {
+        // Xử lý cho các loại nguồn URL và text như cũ
+        if (selectedSourceType === 'text' || selectedSourceType === 'article' || selectedSourceType === 'youtube' || selectedSourceType === 'tiktok') {
+            const value = selectedSourceType === 'text' ? sourceTextInput : sourceUrlInput;
+            if (!value.trim()) return;
+            const source = { type: selectedSourceType, value, label: value.substring(0, 50) + '...' };
+            if (shouldSaveSource) addSavedSource(source);
+            setIsSourceModalOpen(false);
+            openCreateFromSourceModal(source);
+        } 
+        // *** XỬ LÝ MỚI CHO VIỆC UPLOAD FILE ***
+        else if ((selectedSourceType === 'pdf' || selectedSourceType === 'audio') && selectedFile) {
+            setIsUploading(true);
+            try {
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+
+                // Gọi API route để upload file PDF
+                // (Sau này có thể tạo route riêng cho audio)
+                const response = await fetch('/api/pdf/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Upload file thất bại.');
+                }
+
+                const result = await response.json();
+                
+                // Sau khi upload thành công, chúng ta có file URI từ Gemini
+                const source = {
+                    type: selectedSourceType,
+                    value: result.fileUri, // Quan trọng: value giờ là file URI
+                    label: result.fileName,
+                };
+
+                if (shouldSaveSource) addSavedSource(source);
+                setIsSourceModalOpen(false);
+                openCreateFromSourceModal(source);
+
+            } catch (error) {
+                console.error("Lỗi upload file:", error);
+                alert(error instanceof Error ? error.message : "Đã có lỗi xảy ra.");
+            } finally {
+                setIsUploading(false);
+            }
+        }
+    };
+
+    const isFileUpload = selectedSourceType === 'pdf' || selectedSourceType === 'audio';
 
     const sourceTypeOptions = [
     { key: "text", label: "Văn bản" },
@@ -95,30 +139,53 @@ export default function SourceModal() {
             </div>
             {/* Body */}
                         <div className="px-6 py-4 space-y-3 overflow-auto" style={{ maxHeight: "60vh" }}>
-                          <div className="text-white">Văn bản</div>
-                          {selectedSourceType === 'text' && (
-                            <Textarea placeholder="Dán văn bản vào đây" 
-                              className="bg-gray-900/50 border-white/10 h-40"
-                              value={sourceTextInput}
-                              onChange={(e) => setSourceTextInput(e.target.value)}
-                            />
-                          )}
-            
-                          {selectedSourceType !== 'text' && (
-                            <Input
-                              placeholder={
+                          {/* *** THAY ĐỔI GIAO DIỆN Ở ĐÂY *** */}
+                    {!isFileUpload ? (
+                        <>
+                            <div className="text-white">
+                                {selectedSourceType === 'text' ? 'Văn bản' : 'URL'}
+                            </div>
+                            {selectedSourceType === 'text' ? (
+                                <Textarea 
+                                placeholder="Dán văn bản vào đây" 
+                                className="bg-gray-900/50 border-white/10 h-40" 
+                                value={sourceTextInput} onChange={(e) => setSourceTextInput(e.target.value)} />
+                            ) : (
+                                <Input 
+                                placeholder={
                                 selectedSourceType === 'article' ? 'Dán URL bài viết...' :
                                 selectedSourceType === 'youtube' ? 'Dán URL YouTube...' :
-                                selectedSourceType === 'tiktok' ? 'Dán URL TikTok...' :
-                                selectedSourceType === 'pdf' ? 'Dán URL PDF...' :
-                                selectedSourceType === 'perplexity' ? 'Dán URL Perplexity...' :
-                                'Dán URL âm thanh...'
+                                selectedSourceType === 'tiktok' ? 'Dán URL TikTok...'
+                                : 'Dán URL nguồn...'
                               }
                               className="bg-gray-900/50 border-white/10"
-                              value={sourceUrlInput}
-                              onChange={(e) => setSourceUrlInput(e.target.value)}
-                            />
-                          )}
+                                value={sourceUrlInput} 
+                                onChange={(e) => setSourceUrlInput(e.target.value)} />
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            <div className="text-white">Tải lên tệp tin</div>
+                            <div 
+                                className="border-2 border-dashed border-gray-500 rounded-lg p-8 text-center cursor-pointer hover:border-gray-400"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    onChange={handleFileChange}
+                                    accept={selectedSourceType === 'pdf' ? '.pdf' : 'audio/*'}
+                                />
+                                <UploadCloudIcon className="mx-auto h-12 w-12 text-gray-400" />
+                                {selectedFile ? (
+                                    <p className="mt-2 text-sm text-green-400">{selectedFile.name}</p>
+                                ) : (
+                                    <p className="mt-2 text-sm text-gray-400">Nhấn để chọn file {selectedSourceType.toUpperCase()}</p>
+                                )}
+                            </div>
+                        </>
+                    )}  
                           <label className="flex items-center gap-3 text-white pt-2">
                             <input 
                               type="checkbox" 
@@ -146,9 +213,9 @@ export default function SourceModal() {
                         </div>
                 <div className="px-6 pb-6">
                     <button 
-                    onClick={handleAddAndProceed} 
+                    onClick={handleAdd} 
                     className="w-full bg-[#7C3AED] hover:bg-[#6D28D9] text-white py-3 rounded-md disabled:opacity-50"
-                    disabled={!(selectedSourceType === 'text' ? sourceTextInput.trim() : sourceUrlInput.trim())}>
+                    disabled={isUploading || (!sourceTextInput.trim() && !sourceUrlInput.trim() && !selectedFile)}>
                         Thêm
                     </button>
                 </div>

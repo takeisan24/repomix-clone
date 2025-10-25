@@ -576,94 +576,36 @@ export const useCreatePageStore = create<CreatePageState>((set, get) => ({
     const text = chatInput.trim()
     if (!text || get().isTyping) return;
     
+    const userMessage = { role: 'user' as const, content: text };
     set(state => ({ 
-            chatMessages: [...state.chatMessages, { role: 'user', content: text }] 
+            chatMessages: [...state.chatMessages, userMessage] 
         }));
     set({ isTyping: true });
     
-    const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY
-    if (!GEMINI_API_KEY) throw new Error("Missing Gemini API Key");
-    
+    const currentChatMessages = get().chatMessages;
+    const historyForApi = currentChatMessages.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }]
+    }))
 
     try {
-      const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null
-      const model = genAI?.getGenerativeModel({ model: "gemini-2.5-pro" })
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ history: historyForApi, newMessage: text , 
+          //modelPreference: get().selectedChatModel
+        }),
+      });
 
-      const geminiSystemInstruction = `
-    Bạn là một trợ lý viết bài cho mạng xã hội chuyên nghiệp. 
-    Nhiệm vụ của bạn là giúp người dùng tạo nội dung hấp dẫn cho các nền tảng như Facebook, Twitter, Instagram, LinkedIn, TikTok, Threads, Bluesky, YouTube, Pinterest.
-
-    Khi người dùng yêu cầu tạo bài đăng, hãy trả lời theo định dạng JSON sau:
-    \`\`\`json
-    {
-      "action": "create_post",
-      "platform": "Tên nền tảng (ví dụ: Facebook, Twitter)",
-      "content": "Nội dung bài đăng bạn đã tạo.",
-      "summary_for_chat": "Tóm tắt ngắn gọn bài đăng đã tạo để hiển thị trong khung chat (tối đa 2 câu)."
-    }
-    \`\`\`
-    Các "Tên nền tảng" hợp lệ là: Facebook, Twitter, Instagram, LinkedIn, TikTok, Threads, Bluesky, YouTube, Pinterest.
-    Đảm bảo nội dung bài đăng (trường "content") phù hợp với giới hạn và phong cách của nền tảng đó.
-
-    Nếu người dùng chỉ hỏi chung chung hoặc cần trợ giúp khác, hãy trả lời bằng văn bản thuần túy, thân thiện và hữu ích.
-    Tuyệt đối không sử dụng định dạng JSON nếu không phải là yêu cầu tạo bài đăng.
-    Luôn trả lời bằng tiếng Việt.
-`
-
-      if (!genAI || !model) {
-        set(state => ({ 
-            chatMessages: [...state.chatMessages, { role: 'assistant', content: "Lỗi: Không thể kết nối với API Gemini. Vui lòng kiểm tra API Key và đảm bảo bạn đã chọn model Gemini." }] 
-        }));
-        set({ isTyping: false });
-        return;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Lỗi API: ${response.statusText}`);
       }
-      // Xây dựng lịch sử trò chuyện cho Gemini
-      // Lưu ý: role 'assistant' trong ứng dụng của bạn tương ứng với 'model' trong Gemini API
-      const currentChatMessages = get().chatMessages;
-      const historyForGemini = currentChatMessages.map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }]
-      }))
-
-      // Bắt đầu cuộc trò chuyện với system instruction
-      const chat = model.startChat({
-        history: [{
-            role: 'user',
-            parts: [{ text: geminiSystemInstruction }] // Gửi system instruction như tin nhắn đầu tiên của user
-          }, {
-            role: 'model',
-            parts: [{ text: "Đã hiểu! Tôi sẵn sàng giúp bạn tạo bài đăng hoặc trả lời câu hỏi." }] // Phản hồi của model cho system instruction
-          },
-          ...historyForGemini // Thêm lịch sử trò chuyện thực tế sau đó
-        ],
-        generationConfig: {
-          temperature: 0.7, // Điều chỉnh để có phản hồi sáng tạo hơn
-          maxOutputTokens: 10000, // Tăng giới hạn để đảm bảo đủ chỗ cho JSON và nội dung bài viết
-        },
-        safetySettings: [
-          {
-            category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-            threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-            threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-            threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-            threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-          },
-        ],
-      })
-
-      const result = await chat.sendMessage(text)
-      let geminiResponseText = result.response.text()
-
-      let aiResponseForChat: string = geminiResponseText; // Mặc định hiển thị toàn bộ phản hồi
+      
+      const data = await response.json();
+      const geminiResponseText = data.response;
+      
+      let aiResponseForChat = geminiResponseText; // Mặc định hiển thị toàn bộ phản hồi
       let shouldCreatePost = false;
       let platformName = "";
       let postContent = "";
@@ -711,11 +653,10 @@ export const useCreatePageStore = create<CreatePageState>((set, get) => ({
       }
 
     } catch (error) {
-      console.log("Lỗi khi gọi API Gemini:", error)
-      console.error("Lỗi khi gọi API Gemini:", error)
-      set(state => {
-        return { chatMessages: [...state.chatMessages, { role: 'assistant', content: "Đã xảy ra lỗi khi tạo phản hồi từ Gemini. Vui lòng thử lại." }] }
-      })
+      const errorMessage = error instanceof Error ? error.message : "Lỗi không xác định.";
+            set(state => ({ 
+                chatMessages: [...state.chatMessages, { role: 'assistant', content: `Xin lỗi, đã có lỗi xảy ra: ${errorMessage}` }] 
+            }));
     } finally {
       set({ isTyping: false });
     }
@@ -746,10 +687,11 @@ openCreateFromSourceModal: (source) => set({ sourceToGenerate: source, isCreateF
 closeCreateFromSourceModal: () => set({ isCreateFromSourceModalOpen: false, sourceToGenerate: null }),
 
 generatePostsFromSource: async (selectedPlatforms) => {
-    const { sourceToGenerate, handlePostCreate, handlePostContentChange } = get();
+    const { sourceToGenerate, handlePostCreate, handlePostContentChange} = get();
     if (!sourceToGenerate) return;
 
-    set({ isTyping: true, isCreateFromSourceModalOpen: false}); // Bật loading trong chatbox
+    set({ isTyping: true, isCreateFromSourceModalOpen: false});
+
     set(state => ({
         chatMessages: [...state.chatMessages, { role: 'user', content: `Đang tạo ${selectedPlatforms.reduce((acc, p) => acc + p.count, 0)} bài viết từ nguồn ${sourceToGenerate.type}...` }]
     }));
@@ -759,23 +701,19 @@ generatePostsFromSource: async (selectedPlatforms) => {
     
 
     try {
-        const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY; // Lấy từ file gốc
-        if (!GEMINI_API_KEY) throw new Error("Missing Gemini API Key");
+        const response = await fetch('/api/generate-from-source', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({prompt: userPrompt}),
+        });
 
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Lỗi API: ${response.statusText}`);
+        }
 
-        if (!genAI || !model) {
-        set(state => ({ 
-            chatMessages: [...state.chatMessages, { role: 'assistant', content: "Lỗi: Không thể kết nối với API Gemini. Vui lòng kiểm tra API Key và đảm bảo bạn đã chọn model Gemini." }] 
-        }));
-        set({ isTyping: false });
-        return;
-      }
-        
-        // Không cần gửi history cho tác vụ này để prompt được rõ ràng hơn
-        const result = await model.generateContent(userPrompt);
-        const geminiResponseText = result.response.text();
+        const data = await response.json();
+        const geminiResponseText = data.response;
 
         // 4. Xử lý kết quả trả về
         const jsonMatch = geminiResponseText.match(/```json\n([\s\S]*?)\n```/);
@@ -1075,3 +1013,5 @@ openLightbox: (url, type) => set({ lightboxMedia: { url, type } }),
 
 closeLightbox: () => set({ lightboxMedia: { url: null, type: null } }),
 }));
+
+export const getCreatePageStore = useCreatePageStore.getState;

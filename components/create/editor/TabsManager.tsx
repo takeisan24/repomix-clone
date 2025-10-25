@@ -34,7 +34,6 @@ export default function TabsManager() {
 
     // State cục bộ cho dropdown "Thêm bài"
     const [showPostPicker, setShowPostPicker] = useState(false);
-    const postPickerRef = useRef<HTMLDivElement>(null);
 
     return (
         <div className="flex items-center gap-3 mb-4">
@@ -65,9 +64,9 @@ export default function TabsManager() {
             </div>
 
             {/* Nút "Thêm bài" và dropdown */}
+            <div>
             <div
                 className="relative flex-shrink-0"
-                ref={postPickerRef}
                 onMouseEnter={() => setShowPostPicker(true)}
                 onMouseLeave={() => setShowPostPicker(false)}
             >
@@ -75,7 +74,7 @@ export default function TabsManager() {
                     <PlusIcon className="w-4 h-4 mr-1.5" /> Thêm bài
                 </Button>
                 {showPostPicker && (
-                    <div className="absolute right-0 z-20 mt-2 w-[13.75rem] bg-[#2A2A30] border border-[#3A3A42] rounded-lg shadow-lg p-3">
+                    <div className="absolute right-0 top-full z-20 mt-2 w-[13.75rem] bg-[#2A2A30] border border-[#3A3A42] rounded-lg shadow-lg p-3">
                         <div className="space-y-1">
                             {platformOptions.map((option) => (
                                 <button
@@ -93,6 +92,7 @@ export default function TabsManager() {
                         </div>
                     </div>
                 )}
+            </div>
             </div>
         </div>
     );

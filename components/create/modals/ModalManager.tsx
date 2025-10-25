@@ -21,7 +21,6 @@ export default function ModalManager() {
         isImageGenModalOpen,
         isVideoGenModalOpen,
         lightboxUrl,
-        selectedPostId,
     } = useCreatePageStore(useShallow(state => ({
         isSourceModalOpen: state.isSourceModalOpen,
         isCreateFromSourceModalOpen: state.isCreateFromSourceModalOpen,
@@ -29,7 +28,6 @@ export default function ModalManager() {
         isImageGenModalOpen: state.isImageGenModalOpen,
         isVideoGenModalOpen: state.isVideoGenModalOpen,
         lightboxUrl: state.lightboxMedia.url,
-        selectedPostId: state.selectedPostId,
     })));
 
     // Logic render có điều kiện

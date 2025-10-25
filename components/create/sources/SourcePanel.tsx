@@ -33,7 +33,6 @@ export default function SourcePanel() {
     // Logic để mở modal tạo bài viết từ nguồn sẽ được xử lý sau, tạm thời để trống
     const handleSourceClick = (source: any) => {
         console.log("Mở modal tạo bài viết từ nguồn:", source);
-        // TODO: Mở modal CreatePostFromSourceModal
         openCreateFromSourceModal({type: source.type, value:source.value});
     };
     return (

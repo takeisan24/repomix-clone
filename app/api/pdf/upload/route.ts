@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Lấy API key từ environment variable
-    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.error('❌ API Key not found! Please check .env.local file');
       return NextResponse.json({ error: 'API key not configured' }, { status: 500 });

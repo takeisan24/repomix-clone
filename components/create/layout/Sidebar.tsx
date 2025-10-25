@@ -2,7 +2,9 @@
 
 import LanguageSwitcher from "@/components/shared/LanguageSwitcher"
 import { Button } from "@/components/ui/button"
-import { useState } from "react"
+
+import { useRouter } from '@/i18n/navigation'; 
+import { on } from "events";
 
 interface SidebarProps {
   activeSection: string
@@ -22,9 +24,9 @@ export default function Sidebar({
   onSectionChange, 
   isSidebarOpen, 
   onSidebarToggle,
-  language = 'vi',
-  onLanguageChange
 }: SidebarProps) {
+
+  const router = useRouter();
   // Navigation items organized by categories
   const navigationCategories = [
     {
@@ -92,6 +94,10 @@ export default function Sidebar({
     }
   ]
 
+  const handleSectionClick = (itemId: string, itemUrl: string) => {
+    onSectionChange(itemId);
+    router.push(itemUrl);
+  }
   return (
     <div 
       className={`${isSidebarOpen ? 'w-55' : 'w-[80px]'} transition-[width] duration-150 ease-out border-r border-white/10 p-4 pt-[30px] bg-[#1A0F30] absolute inset-y-0 left-0 z-20`}
@@ -115,18 +121,19 @@ export default function Sidebar({
             
             {/* Category Items */}
             <div className={`space-y-1 ${category.title === 'QUẢN LÝ' ? 'pt-4' : ''} ${category.title === 'TÀI KHOẢN' ? 'pt-4' : ''}`}>
-              {category.items.map((item) => (
+              {category.items.map((item) => { 
+                const isActive = activeSection === item.id || (item.id === 'create' && activeSection === 'create');
+                return(
                 <Button
                   key={item.id}
-                  variant={activeSection === item.id ? "secondary" : "ghost"}
+                  variant={isActive ? "secondary" : "ghost"}
                   className={`w-full ${isSidebarOpen ? 'justify-start' : 'justify-center'} text-[#F5F5F7] border ${
-                    activeSection === item.id
+                    isActive
                       ? "bg-[#E33265]/80 border-[#E33265]/80"
                       : "border-transparent hover:bg-transparent hover:border-[#E33265]/80 hover:border-[1.5px] focus:bg-transparent"
                   }`}
                   onClick={() => { 
-                    onSectionChange(item.id)
-                    window.history.pushState(null, "", item.url) 
+                    handleSectionClick(item.id, item.url);
                   }}
                 >
                   {isSidebarOpen ? (
@@ -150,7 +157,7 @@ export default function Sidebar({
                   )}
                   {isSidebarOpen && <span>{item.label}</span>}
                 </Button>
-              ))}
+              )})}
             </div>
           </div>
         ))}

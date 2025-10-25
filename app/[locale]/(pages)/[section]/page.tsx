@@ -12,32 +12,34 @@ import { useShallow } from 'zustand/react/shallow'
 export default function SectionPage({ params }: { params: { section: string } }) {
   // Dùng useShallow để component chỉ re-render khi một trong các giá trị này thay đổi,
   // thay vì re-render mỗi khi bất kỳ giá trị nào khác trong store thay đổi.
-  const {activeSection, setActiveSection, isSidebarOpen,
-    setIsSidebarOpen} = useCreatePageStore(
+  const { setActiveSection, isSidebarOpen, setIsSidebarOpen } = useCreatePageStore(
     useShallow((state) => ({
-      activeSection: state.activeSection,
       setActiveSection: state.setActiveSection,
       isSidebarOpen: state.isSidebarOpen,
       setIsSidebarOpen: state.setIsSidebarOpen,
     }))
-  )
+  );
 
+  // *** THAY ĐỔI 1: Lấy section từ URL ngay lập tức ***
+  const sectionFromUrl = params.section;
+
+  // useEffect vẫn cần thiết để cập nhật state trong store
   useEffect(() => {
-    // Handle 'create' as the default or when the path is just /create
-    const sectionToSet = params.section === "create" ? "create-post" : params.section;
-    if (sectionToSet) {
-      setActiveSection(sectionToSet);
+    // Chỉ cập nhật nếu state trong store chưa khớp
+    const currentState = useCreatePageStore.getState().activeSection;
+    if (sectionFromUrl && sectionFromUrl !== currentState) {
+      setActiveSection(sectionFromUrl);
     }
-  }, [params.section]);
+  }, [sectionFromUrl, setActiveSection]);
 
   return (
     <CreateLayout
-      activeSection={activeSection}
+      activeSection={sectionFromUrl}
       onSectionChange={setActiveSection}
       isSidebarOpen={isSidebarOpen}
       onSidebarToggle={setIsSidebarOpen}
     >
-      <MainContent activeSection={activeSection}>
+      <MainContent activeSection={sectionFromUrl}>
         <SectionsManager />
       </MainContent>
     </CreateLayout>
