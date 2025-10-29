@@ -1,11 +1,8 @@
-// store/createPageStore.ts
-import { create } from 'zustand';
-import { saveToLocalStorage, loadFromLocalStorage, removeFromLocalStorage } from '@/lib';
-import { CalendarEvent } from '@/lib';
 
-// Thêm import cho Gemini
-import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from "@google/generative-ai"
-import { GoogleGenAI } from "@google/genai"
+import { create } from 'zustand';
+import { saveToLocalStorage, loadFromLocalStorage, removeFromLocalStorage } from '@/lib/utils/storage';
+import { CalendarEvent } from '@/lib/types/calendar';
+import { toast } from 'sonner';
 
 // Định nghĩa các kiểu dữ liệu (bạn có thể copy từ useCreatePage.ts)
 interface Post {
@@ -40,7 +37,7 @@ interface PublishedPost {
     }
 }
 
-interface FailedPost{
+export interface FailedPost{
     id: number
     platform: string
     content: string
@@ -53,13 +50,20 @@ interface FailedPost{
     platformIcon?: string
 }
 
-interface VideoProject{
+export interface VideoProject{
     id: string
     title: string
     thumbnail: string
     duration: string
     createdAt: string
     status: 'processing' | 'completed' | 'failed'
+    // Thêm các trường tùy chọn
+    originalFile?: File; 
+    options?: {
+        language: string;
+        multiSpeaker: boolean;
+        translate: boolean;
+    };
 }
 
 interface ApiStats {
@@ -113,7 +117,9 @@ interface CreatePageState {
     postToEventMap: Record<number, {eventId: string, dateKey: string}>;
     uploadedMedia: MediaFile[];
     currentMediaIndex: number;
+
     videoProjects: VideoProject[];
+
     apiStats: ApiStats;
     apiKeys: ApiKey[];
     calendarEvents: Record<string, CalendarEvent[]>;
@@ -144,6 +150,8 @@ interface CreatePageState {
     isVideoGenModalOpen: boolean; 
 
     lightboxMedia: { url: string | null; type: 'image' | 'video' | null };
+
+    isSavingDraft: boolean;
     
 
   // Actions (các hàm cập nhật state)
@@ -180,12 +188,12 @@ interface CreatePageState {
   handleDeletePost: (id: number) => void;
 
   // Hàm quản lý video
-  handleVideoUpload: () => void;
+  handleVideoUpload: (file: File, options: { language: string; multiSpeaker: boolean; translate: boolean; }) => void;
   handleVideoEdit: (projectId: string) => void;
   handleVideoDelete: (projectId: string) => void;
 
   // Hàm quản lý sự kiện lịch
-  handleEventAdd: (year: number, month: number, day: number, platform: string) => void;
+  handleEventAdd: (year: number, month: number, day: number, platform: string, time?: string) => void;
   handleEventUpdate: (oldYear: number, oldMonth: number, oldDay: number, oldEvent: CalendarEvent, newYear: number, newMonth: number, newDay: number, newTime?: string) => void;
   handleEventDelete: (year: number, month: number, day: number, event: CalendarEvent) => void;
   handleClearCalendarEvents: () => void;
@@ -237,13 +245,15 @@ export const useCreatePageStore = create<CreatePageState>((set, get) => ({
   postToEventMap: {},
   uploadedMedia: [],
   currentMediaIndex: 0,
+
   // Tải dữ liệu từ localStorage ngay khi store được tạo
   calendarEvents: loadFromLocalStorage('calendarEvents', {}),
   draftPosts: loadFromLocalStorage('draftPosts', []),
   publishedPosts: loadFromLocalStorage('publishedPosts', []),
   failedPosts: loadFromLocalStorage('failedPosts', []),
+  videoProjects: loadFromLocalStorage('videoProjects', []) as VideoProject[], 
+  
 
-  videoProjects: [], // Tạm thời để trống, bạn có thể thêm logic load sau
   apiStats: { apiCalls: 1247, successRate: 98.5, rateLimit: { used: 750, total: 1000, resetTime: "2h 15m" } },
   apiKeys: [ 
     { id: '1', name: 'Production Key', type: 'production', lastUsed: '2 hours ago', isActive: true }, 
@@ -269,6 +279,8 @@ export const useCreatePageStore = create<CreatePageState>((set, get) => ({
 
   isVideoGenModalOpen: false,
   lightboxMedia: { url: null, type: null },
+
+  isSavingDraft: false,
 
   // --- Triển khai các Actions ---
   // Các hàm đơn giản chỉ cập nhật state
@@ -333,12 +345,14 @@ export const useCreatePageStore = create<CreatePageState>((set, get) => ({
     });
   },
 
-
   // Nhân bản bài viết
   handleClonePost: (postId) => {
     const { openPosts, postContents } = get();
     const post = openPosts.find(p => p.id === postId);
-    if (!post) return;
+    if (!post) {
+        toast.error("Không tìm thấy bài đăng để nhân bản.");
+        return;
+    };
     
     const newId = Date.now();
     const content = postContents[postId] || "";
@@ -349,28 +363,59 @@ export const useCreatePageStore = create<CreatePageState>((set, get) => ({
         postContents: { ...state.postContents, [newId]: content },
         selectedPostId: newId
     }));
-  },
 
+    // Hiển thị thông báo thành công
+    toast.info(`Đã nhân bản bài viết "${post.type}".`);
+  },
 
   // Lưu bản nháp vào localStorage
   handleSaveDraft: (postId) => {
-    const { openPosts, postContents, draftPosts } = get();
-    const post = openPosts.find(p => p.id === postId);
-    if (!post) return;
+        set({ isSavingDraft: true }); // Bật trạng thái loading
+        try {
+            const { openPosts, postContents, draftPosts } = get();
+            const post = openPosts.find(p => p.id === postId);
+            if (!post) {
+                throw new Error("Không tìm thấy bài đăng để lưu.");
+            }
 
-    const content = postContents[postId] || "";
-    const draft: DraftPost = {
-      id: postId,
-      platform: post.type,
-      content,
-      time: new Date().toISOString(),
-      status: 'draft'
-    };
+            const content = postContents[postId] || "";
+            // Yêu cầu: Không lưu nháp nếu nội dung rỗng
+            if (!content.trim()) {
+                toast.warning("Không thể lưu bản nháp rỗng.");
+                return; // Dừng lại ở đây
+            }
 
-    const updatedDrafts = [...draftPosts.filter(d => d.id !== postId), draft];
-    set({ draftPosts: updatedDrafts });
-    saveToLocalStorage('draftPosts', updatedDrafts);
-  },
+            const draft: DraftPost = {
+                id: postId,
+                platform: post.type,
+                content,
+                time: new Date().toISOString(),
+                status: 'draft'
+            };
+
+            const updatedDrafts = [
+                ...draftPosts.filter(d => d.id !== postId), // Xóa bản nháp cũ (nếu có)
+                draft // Thêm bản nháp mới/cập nhật
+            ];
+
+            set({ draftPosts: updatedDrafts });
+            saveToLocalStorage('draftPosts', updatedDrafts);
+
+            // Hiển thị thông báo thành công
+            toast.success("Đã lưu bản nháp thành công!");
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Lỗi không xác định.";
+            console.error("Lỗi khi lưu bản nháp:", error);
+            // Hiển thị thông báo lỗi
+            toast.error(`Lưu bản nháp thất bại: ${errorMessage}`);
+        } finally {
+            // Luôn tắt trạng thái loading sau 1 giây để người dùng thấy phản hồi
+            setTimeout(() => {
+                set({ isSavingDraft: false });
+            }, 1000);
+        }
+    },
 
   // Hàm quản lý media
   handleMediaUpload: (files) => {
@@ -390,22 +435,59 @@ export const useCreatePageStore = create<CreatePageState>((set, get) => ({
   },
 
   handlePublish: (postId) => {
-    const { openPosts, postContents, publishedPosts, handlePostDelete } = get();
+    const { openPosts, postContents, publishedPosts, calendarEvents, handlePostDelete } = get();
     const post = openPosts.find(p => p.id === postId);
+
     if (post) {
-      const publishedPost: PublishedPost = {
-        id: postId,
-        platform: post.type,
-        content: postContents[postId] || "",
-        time: new Date().toISOString(),
-        status: 'published',
-        url: `https://${post.type.toLowerCase()}.com/post/${postId}`,
-        engagement: { likes: 0, comments: 0, shares: 0 }
-      };
-      const updatedPublished = [...publishedPosts, publishedPost];
-      set({ publishedPosts: updatedPublished });
-      saveToLocalStorage('publishedPosts', updatedPublished);
-      handlePostDelete(postId);
+        const content = postContents[postId] || "";
+        if (!content.trim()) {
+            toast.warning("Không thể đăng một bài viết rỗng.");
+            return;
+        }
+
+        const now = new Date();
+        const publishedPost: PublishedPost = {
+            id: postId,
+            platform: post.type,
+            content: content,
+            time: now.toISOString(),
+            status: 'published',
+            url: `https://${post.type.toLowerCase()}.com/post/${postId}`,
+            engagement: { likes: 0, comments: 0, shares: 0 }
+        };
+
+        const updatedPublished = [...publishedPosts, publishedPost];
+
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const time24h = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        const dateKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+
+        const newCalendarEvent: CalendarEvent = {
+            id: `event-${Date.now()}`,
+            platform: post.type,
+            time: time24h,
+            status: 'posted',
+            noteType: 'green',
+            content: content,
+            url: publishedPost.url
+        };
+
+        const updatedEvents = { ...calendarEvents };
+        updatedEvents[dateKey] = [...(updatedEvents[dateKey] || []), newCalendarEvent];
+
+        set({ 
+            publishedPosts: updatedPublished,
+            calendarEvents: updatedEvents // Cập nhật state của lịch
+        });
+        saveToLocalStorage('publishedPosts', updatedPublished);
+        
+        // Hiển thị thông báo thành công
+        toast.success(`Bài viết "${post.type}" đã được đăng thành công!`);
+
+        // Xóa tab bài viết đã đăng
+        handlePostDelete(postId);
+    } else {
+        toast.error("Không tìm thấy bài đăng để xuất bản.");
     }
   },
   
@@ -438,11 +520,22 @@ export const useCreatePageStore = create<CreatePageState>((set, get) => ({
 
   handleDeleteDraft: (id) => {
     set(state => {
+        const draftToDelete = state.draftPosts.find(p => p.id === id);
+        if (!draftToDelete) {
+            // Hiển thị lỗi nếu không tìm thấy, mặc dù trường hợp này hiếm
+            toast.error("Không tìm thấy bản nháp để xóa.");
+            return {};
+        }
+
         const updated = state.draftPosts.filter(p => p.id !== id);
         saveToLocalStorage('draftPosts', updated);
+
+        // Hiển thị thông báo thành công
+        toast.success("Đã xóa bản nháp thành công.");
+        
         return { draftPosts: updated };
     });
-  },
+},
 
   handlePublishDraft: (id) => {
     const { draftPosts, handlePublish, handleDeleteDraft } = get();
@@ -456,109 +549,297 @@ export const useCreatePageStore = create<CreatePageState>((set, get) => ({
   
   handleViewPost: (url) => { if (url) window.open(url, '_blank'); },
 
-  handleRetryPost: (id, rescheduleDate, rescheduleTime) => { 
+  handleRetryPost: (id, rescheduleDate, rescheduleTime) => {
+    const { failedPosts, schedulePost, publishedPosts, openPostFromUrl } = get();
+    const post = failedPosts.find(p => p.id === id);
+    if (!post) {
+        toast.error("Không tìm thấy bài viết thất bại để thử lại.");
+        return;
+    }
 
-        const { failedPosts, openPostFromUrl } = get();
-        const post = failedPosts.find(p => p.id === id);
-        if (!post) return {};
+    // Luồng 1: Lên lịch lại
+    if (rescheduleDate && rescheduleTime) {
+        // Biến bài đăng thất bại thành một bài đăng "ảo" để lên lịch
+        const tempPostId = Date.now();
+        set(state => ({
+            openPosts: [...state.openPosts, { id: tempPostId, type: post.platform }],
+            postContents: { ...state.postContents, [tempPostId]: post.content }
+        }));
         
-        const updatedFailedPosts = failedPosts.filter(p => p.id !== id);
-        set({failedPosts: updatedFailedPosts});
-        saveToLocalStorage('failedPosts', updatedFailedPosts);
+        const dateObj = new Date(rescheduleDate);
+        // Gọi hàm schedulePost đã có sẵn toast
+        schedulePost(tempPostId, dateObj, rescheduleTime);
 
-        if(rescheduleDate || rescheduleTime){
-            const dateObj = new Date(rescheduleDate || '');
-            const year = dateObj.getFullYear();
-            const month = dateObj.getMonth();
-            const day = dateObj.getDate();
-            get().handleEventAdd(year, month, day, post.platform);
-        } else{
-            const newPublishPost: PublishedPost = {
+        // Xóa khỏi danh sách thất bại sau khi đã xử lý
+        set(state => ({
+            failedPosts: state.failedPosts.filter(p => p.id !== id)
+        }));
+        saveToLocalStorage('failedPosts', get().failedPosts);
+        return;
+    }
+
+    const getFailureReason = (post: FailedPost) => {
+    const platform = (post.platform || '').toLowerCase()
+    const contentLength = (post.content || '').length
+    const characterLimits: Record<string, number> = {
+      twitter: 280,
+      facebook: 2200,
+      instagram: 2200,
+      linkedin: 3000,
+      threads: 500,
+      tiktok: 2200,
+      bluesky: 300,
+      youtube: 5000,
+      pinterest: 500
+    }
+    const limit = characterLimits[platform] ?? 2200
+    const err = (post.error || '').toLowerCase()
+
+    if (contentLength > limit || err.includes('character') || err.includes('limit')) {
+      return {
+        type: 'character_limit',
+        message: `Vượt giới hạn ký tự. Vui lòng rút gọn còn ${limit} ký tự.`,
+        currentLength: contentLength,
+        limit
+      }
+    }
+    if (err.includes('network') || err.includes('timeout') || err.includes('connection')) {
+      return { type: 'connection', message: 'Kết nối kém. Vui lòng thử lại.', currentLength: contentLength, limit }
+    }
+    if (err.includes('authentication') || err.includes('auth')) {
+      return { type: 'authentication', message: 'Lỗi xác thực. Hãy kiểm tra cài đặt tài khoản.', currentLength: contentLength, limit }
+    }
+    if (err.includes('policy') || err.includes('violation')) {
+      return { type: 'policy', message: 'Nội dung vi phạm chính sách. Vui lòng chỉnh sửa.', currentLength: contentLength, limit }
+    }
+    return { type: 'other', message: 'Đã xảy ra lỗi không xác định. Vui lòng thử lại.', currentLength: contentLength, limit }
+  }
+    // Luồng 2: Mở trong trình soạn thảo để sửa lỗi nội dung
+    const reason = getFailureReason(post); // Giả sử có một hàm helper để xác định lý do
+    if (reason.type === 'character_limit' || reason.type === 'policy') {
+        openPostFromUrl(post.platform, post.content);
+        set({ activeSection: 'create' });
+        toast.info("Mở bài viết trong trình soạn thảo để bạn chỉnh sửa.");
+        // Xóa khỏi danh sách thất bại
+        set(state => ({
+            failedPosts: state.failedPosts.filter(p => p.id !== id)
+        }));
+        saveToLocalStorage('failedPosts', get().failedPosts);
+        return;
+    }
+    
+    // Luồng 3: Thử đăng lại ngay lập tức (cho các lỗi kết nối)
+    const loadingToastId = toast.loading("Đang thử đăng lại...");
+    
+    // Giả lập một request API
+    setTimeout(() => {
+        const isSuccess = Math.random() > 0.3; // 70% tỷ lệ thành công để test
+        
+        if (isSuccess) {
+            const newPublishedPost: PublishedPost = {
                 id: Date.now(),
                 platform: post.platform,
                 content: post.content,
                 time: new Date().toISOString(),
                 status: 'published',
-                url: `https://${post.platform.toLowerCase()}.com/post/${Date.now()}`,
+                url: post.url || `https://${post.platform.toLowerCase()}.com/post/${Date.now()}`,
             };
-            set(state => {
-                const uodatedPublished = [...state.publishedPosts, newPublishPost];
-                saveToLocalStorage('publishedPosts', uodatedPublished);
-                return { publishedPosts: uodatedPublished };
-            });
+
+            set(state => ({
+                publishedPosts: [...state.publishedPosts, newPublishedPost],
+                failedPosts: state.failedPosts.filter(p => p.id !== id) // Xóa khỏi danh sách thất bại
+            }));
+            saveToLocalStorage('publishedPosts', get().publishedPosts);
+            saveToLocalStorage('failedPosts', get().failedPosts);
+
+            toast.success("Đăng lại bài viết thành công!", { id: loadingToastId });
+        } else {
+            // Nếu vẫn thất bại, chỉ cần cập nhật toast
+            toast.error("Đăng lại thất bại. Vui lòng thử lại sau.", { id: loadingToastId });
+            // Bài viết vẫn nằm trong danh sách failed, không cần làm gì thêm
         }
-   },
+    }, 1500); // Giả lập độ trễ mạng 1.5 giây
+},
+  
   handleDeletePost: (id) => {
+    let postFound = false;
     set(state => {
+        const initialPublishedCount = state.publishedPosts.length;
+        const initialFailedCount = state.failedPosts.length;
+
         const updatedPublished = state.publishedPosts.filter(p => p.id !== id);
         const updatedFailed = state.failedPosts.filter(p => p.id !== id);
+
+        if (updatedPublished.length < initialPublishedCount || updatedFailed.length < initialFailedCount) {
+            postFound = true;
+        }
+
         saveToLocalStorage('publishedPosts', updatedPublished);
         saveToLocalStorage('failedPosts', updatedFailed);
         return { publishedPosts: updatedPublished, failedPosts: updatedFailed };
     });
-  },
+
+    // Hiển thị thông báo sau khi state đã cập nhật
+    if (postFound) {
+        toast.success("Đã xóa bài viết thành công.");
+    } else {
+        toast.error("Không tìm thấy bài viết để xóa.");
+    }
+},
   
   //Hàm quản lý video
-  // Tạm thời để trống các hàm này
-  handleVideoUpload: () => console.log('Video upload'),
+  handleVideoUpload: (file, options) => {
+        
+        const newProject: VideoProject = {
+            id: `vid-${Date.now()}`,
+            title: file.name,
+            thumbnail: '',
+            duration: '0:00',
+            createdAt: new Date().toISOString(),
+            status: 'processing',
+            options: options // Gán trực tiếp object options vào đây
+        };
 
-  handleVideoEdit: (projectId) => console.log('Edit video:', projectId),
+        set(state => {
+            const updatedProjects = [...state.videoProjects, newProject];
+            const projectsToSave = updatedProjects.map(({ originalFile, ...rest }) => rest);
+            saveToLocalStorage('videoProjects', projectsToSave);
+            return { videoProjects: updatedProjects };
+        });
+
+        toast.info(`Bắt đầu xử lý video: "${file.name}"...`);
+
+        // Giả lập quá trình xử lý video...
+        setTimeout(() => {
+            set(state => {
+                const updatedProjects = state.videoProjects.map(p => 
+                    p.id === newProject.id ? { ...p, status: 'completed' as const, duration: '0:32' } : p
+                );
+                const projectsToSave = updatedProjects.map(({ originalFile, ...rest }) => rest);
+                saveToLocalStorage('videoProjects', projectsToSave);
+                return { videoProjects: updatedProjects };
+            });
+            toast.success(`Đã xử lý xong video: "${newProject.title}"!`);
+        }, 7000); 
+    },  
+
+
+ handleVideoEdit: (projectId) => {
+        const project = get().videoProjects.find(p => p.id === projectId);
+        if (project) {
+            // Trong tương lai, đây là nơi sẽ điều hướng người dùng đến một
+            // trang chỉnh sửa video chuyên dụng.
+            console.log("Mở trình chỉnh sửa cho dự án:", project);
+            toast.info(`Mở trình chỉnh sửa cho video "${project.title}".`);
+            // Ví dụ: router.push(`/editor/video/${projectId}`);
+        } else {
+            toast.error("Không tìm thấy dự án video.");
+        }
+    },
   
   handleVideoDelete: (projectId) => {
-    set(state => ({
-        videoProjects: state.videoProjects.filter(p => p.id !== projectId)
-    }));
-  },
+        const projectToDelete = get().videoProjects.find(p => p.id === projectId);
+        if (!projectToDelete) {
+            toast.error("Không tìm thấy dự án video để xóa.");
+            return;
+        }
+
+        // Hiển thị modal xác nhận (sử dụng toast.promise)
+        const promise = new Promise<void>((resolve, reject) => {
+            // Đây là nơi bạn có thể hiển thị một modal xác nhận tùy chỉnh
+            // nếu muốn. Với `sonner`, chúng ta có thể dùng action buttons.
+            // Tạm thời, chúng ta sẽ xóa trực tiếp và thông báo.
+            
+            set(state => {
+                const updatedProjects = state.videoProjects.filter(p => p.id !== projectId);
+                saveToLocalStorage('videoProjects', updatedProjects);
+                return { videoProjects: updatedProjects };
+            });
+            resolve();
+        });
+
+        toast.promise(promise, {
+            loading: 'Đang xóa dự án...',
+            success: `Đã xóa dự án "${projectToDelete.title}".`,
+            error: 'Xóa dự án thất bại.',
+        });
+    },
 
 // Hàm thêm sự kiện vào lịch
-  handleEventAdd: (year, month, day, platform) => {
+  handleEventAdd: (year, month, day, platform, time = '') => {
       const key = `${year}-${month}-${day}`;
       const eventId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const newEvent: CalendarEvent = {
           id: eventId,
           platform,
-          time: '',
+          time: time,
           status: 'Trống',
           noteType: 'yellow'
       };
       set(state => {
-          const updatedEvents = { ...state.calendarEvents };
-          updatedEvents[key] = [...(updatedEvents[key] || []), newEvent];
+          // const updatedEvents = { ...state.calendarEvents };
+          // updatedEvents[key] = [...(updatedEvents[key] || []), newEvent];
+          const updatedDayEvents = [...(state.calendarEvents[key] || []), newEvent];
+
+          const updatedEvents = {
+            ...state.calendarEvents, [key]: updatedDayEvents
+          };
+          
           saveToLocalStorage('calendarEvents', updatedEvents);
           return { calendarEvents: updatedEvents };
       });
   },
 
   handleEventDelete: (year, month, day, event) => {
-    const key = `${year}-${month}-${day}`;
     set(state => {
-        const updated = { ...state.calendarEvents };
-        if (updated[key]) {
-            updated[key] = updated[key].filter(ev => ev.id !== event.id);
-            if(updated[key].length === 0) delete updated[key];
-        }
-        saveToLocalStorage('calendarEvents', updated);
-        return { calendarEvents: updated };
-    });
+            const key = `${year}-${month}-${day}`;
+            if (!state.calendarEvents[key]) {
+                return {}; // Không có gì để xóa
+            }
+            
+            // Tạo bản sao mới của mảng sự kiện cho ngày đó, loại bỏ sự kiện cần xóa
+            const updatedDayEvents = state.calendarEvents[key].filter(ev => ev.id !== event.id);
+
+            const updatedEvents = { ...state.calendarEvents };
+
+            if (updatedDayEvents.length > 0) {
+                updatedEvents[key] = updatedDayEvents;
+            } else {
+                // Nếu ngày đó không còn sự kiện nào, xóa luôn key đó
+                delete updatedEvents[key];
+            }
+            
+            saveToLocalStorage('calendarEvents', updatedEvents);
+            return { calendarEvents: updatedEvents };
+        });
   },
 
   handleEventUpdate: (oldYear, oldMonth, oldDay, oldEvent, newYear, newMonth, newDay, newTime) => {
-      const oldKey = `${oldYear}-${oldMonth}-${oldDay}`;
-      const newKey = `${newYear}-${newMonth}-${newDay}`;
       set(state => {
-          const updated = { ...state.calendarEvents };
-          // Xóa khỏi vị trí cũ
-          if (updated[oldKey]) {
-              updated[oldKey] = updated[oldKey].filter(ev => ev.id !== oldEvent.id);
-              if (updated[oldKey].length === 0) delete updated[oldKey];
-          }
-          // Thêm vào vị trí mới
-          const updatedEvent = newTime !== undefined ? { ...oldEvent, time: newTime } : oldEvent;
-          updated[newKey] = [...(updated[newKey] || []), updatedEvent];
-          updated[newKey].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-          saveToLocalStorage('calendarEvents', updated);
-          return { calendarEvents: updated };
-      });
+            const oldKey = `${oldYear}-${oldMonth}-${oldDay}`;
+            const newKey = `${newYear}-${newMonth}-${newDay}`;
+
+            const updatedEvents = { ...state.calendarEvents };
+
+            // 1. Xóa khỏi ngày cũ (bất biến)
+            if (updatedEvents[oldKey]) {
+                const newOldDayEvents = updatedEvents[oldKey].filter(ev => ev.id !== oldEvent.id);
+                if (newOldDayEvents.length > 0) {
+                    updatedEvents[oldKey] = newOldDayEvents;
+                } else {
+                    delete updatedEvents[oldKey];
+                }
+            }
+
+            // 2. Thêm vào ngày mới (bất biến)
+            const updatedEvent = { ...oldEvent, time: newTime === undefined ? oldEvent.time : newTime };
+            const newNewDayEvents = [...(updatedEvents[newKey] || []), updatedEvent];
+            newNewDayEvents.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+            updatedEvents[newKey] = newNewDayEvents;
+
+            saveToLocalStorage('calendarEvents', updatedEvents);
+            return { calendarEvents: updatedEvents };
+        });
   },
 
   handleClearCalendarEvents: () => {
@@ -687,24 +968,69 @@ openCreateFromSourceModal: (source) => set({ sourceToGenerate: source, isCreateF
 closeCreateFromSourceModal: () => set({ isCreateFromSourceModalOpen: false, sourceToGenerate: null }),
 
 generatePostsFromSource: async (selectedPlatforms) => {
-    const { sourceToGenerate, handlePostCreate, handlePostContentChange} = get();
+    // Lấy các state và action cần thiết từ store
+    const { sourceToGenerate, handlePostCreate, handlePostContentChange } = get();
     if (!sourceToGenerate) return;
 
-    set({ isTyping: true, isCreateFromSourceModalOpen: false});
-
+    // Cập nhật UI để báo cho người dùng biết quá trình bắt đầu
+    set({ isTyping: true, isCreateFromSourceModalOpen: false });
+    const chatMessageContent = `Đang tạo ${selectedPlatforms.reduce((acc, p) => acc + p.count, 0)} bài viết từ nguồn ${sourceToGenerate.type}...`;
     set(state => ({
-        chatMessages: [...state.chatMessages, { role: 'user', content: `Đang tạo ${selectedPlatforms.reduce((acc, p) => acc + p.count, 0)} bài viết từ nguồn ${sourceToGenerate.type}...` }]
+        chatMessages: [...state.chatMessages, { role: 'user', content: chatMessageContent }]
     }));
-    
-    const platformInstructions = selectedPlatforms.map(p => `Tạo ${p.count} bài đăng cho nền tảng ${p.platform}.`).join('\n');
-    let userPrompt = `Dựa trên nguồn sau đây: "${sourceToGenerate.value}", hãy tạo các bài đăng theo yêu cầu:\n${platformInstructions}\n\nHãy sáng tạo, đừng chỉ tóm tắt. Mỗi bài đăng phải có nội dung độc đáo, phù hợp với văn phong của nền tảng được chỉ định.\n\nĐịnh dạng phản hồi của bạn BẮT BUỘC là một mảng JSON, mỗi đối tượng chứa "platform", "content", và "summary_for_chat" như sau:\n\`\`\`json\n[\n  {\n    "action": "create_post",\n    "platform": "Tên nền tảng",\n    "content": "Nội dung bài đăng đã tạo.",\n    "summary_for_chat": "Tóm tắt ngắn gọn để hiển thị trong chatbox."\n  }\n]\n\`\`\``;
-    
+
+    // 1. Xây dựng phần chỉ dẫn bằng text cho AI
+    const instructions = `Dựa trên nội dung của file/video/văn bản được cung cấp, hãy tạo các bài đăng theo yêu cầu sau:\n${selectedPlatforms.map(p => `- Tạo ${p.count} bài đăng cho nền tảng ${p.platform}.`).join('\n')}\n\nHãy sáng tạo, đừng chỉ tóm tắt. Phân tích sâu nội dung để đưa ra các góc nhìn thú vị.\n\nĐịnh dạng phản hồi của bạn BẮT BUỘC là một mảng JSON như sau:\n\`\`\`json\n[\n  {\n    "action": "create_post",\n    "platform": "Tên nền tảng",\n    "content": "Nội dung bài đăng đã tạo.",\n    "summary_for_chat": "Tóm tắt ngắn gọn để hiển thị trong chatbox."\n  }\n]\n\`\`\``;
+
+    // 2. Chuẩn bị 'promptParts' - Trái tim của logic từ file backup
+    let promptParts: any[];
+    const sourceType = sourceToGenerate.type;
+    const sourceValue = sourceToGenerate.value;
 
     try {
+        // Bắt đầu xây dựng prompt dựa trên loại nguồn
+        if (sourceType === 'pdf') {
+            promptParts = [
+                instructions,
+                { fileData: { mimeType: 'application/pdf', fileUri: sourceValue } }
+            ];
+        } else if (sourceType === 'youtube') {
+            // Gửi thẳng URL cho Gemini xử lý
+            promptParts = [
+                instructions,
+                { fileData: { mimeType: 'video/mp4', fileUri: sourceValue } }
+            ];
+        } else if (sourceType === 'tiktok') {
+            // Tải video về, chuyển sang base64 và gửi dưới dạng inlineData
+            set(state => ({
+                chatMessages: [...state.chatMessages, { role: 'assistant', content: 'Đang xử lý video TikTok...' }]
+            }));
+            
+            const response = await fetch('/api/tiktok/download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: sourceValue })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.details || data.error || 'Không thể tải video TikTok');
+            
+            promptParts = [
+                instructions,
+                { inlineData: { data: data.base64, mimeType: data.mimeType || 'video/mp4' } }
+            ];
+            set(state => ({ chatMessages: state.chatMessages.slice(0, -1) })); // Xóa thông báo đang xử lý
+        }
+        else {
+            // Mặc định cho 'text', 'article', và các loại URL khác mà Gemini có thể tự hiểu
+            const simplePrompt = `Dựa trên nguồn sau đây: "${sourceValue}", ${instructions}`;
+            promptParts = [simplePrompt];
+        }
+        
+        // 3. Gửi 'promptParts' đến API
         const response = await fetch('/api/generate-from-source', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({prompt: userPrompt}),
+            body: JSON.stringify({ promptParts }),
         });
 
         if (!response.ok) {
@@ -715,40 +1041,25 @@ generatePostsFromSource: async (selectedPlatforms) => {
         const data = await response.json();
         const geminiResponseText = data.response;
 
-        // 4. Xử lý kết quả trả về
+        // 4. Xử lý kết quả (Logic này đã tốt và giữ nguyên)
         const jsonMatch = geminiResponseText.match(/```json\n([\s\S]*?)\n```/);
         if (!jsonMatch || !jsonMatch[1]) {
             throw new Error("Phản hồi của AI không chứa khối JSON hợp lệ.");
         }
-
         const parsedResponses = JSON.parse(jsonMatch[1]);
-        if (!Array.isArray(parsedResponses)) {
-            throw new Error("Dữ liệu JSON trả về không phải là một mảng.");
-        }
+        if (!Array.isArray(parsedResponses)) { throw new Error("Dữ liệu JSON trả về không phải mảng."); }
 
         let overallSummary = `Đã tạo thành công các bài viết từ nguồn:\n`;
-        let postsCreated = 0;
-
-        // Dùng for...of để đảm bảo thứ tự thực thi
         for (const postData of parsedResponses) {
             if (postData.action === "create_post" && postData.platform && postData.content) {
-                // Gọi các action khác trong store để cập nhật state
                 const newPostId = handlePostCreate(postData.platform);
                 if (newPostId) {
                     handlePostContentChange(newPostId, postData.content);
-                    postsCreated++;
                 }
                 overallSummary += `- ${postData.summary_for_chat || `Một bài đăng cho ${postData.platform}`}\n`;
             }
         }
-        
-        if (postsCreated === 0) {
-            throw new Error("AI không trả về bài viết nào hợp lệ.");
-        }
-
-        set(state => ({
-            chatMessages: [...state.chatMessages, { role: 'assistant', content: overallSummary.trim() }]
-        }));
+        set(state => ({ chatMessages: [...state.chatMessages, { role: 'assistant', content: overallSummary.trim() }] }));
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Đã xảy ra lỗi không xác định.";
@@ -768,32 +1079,43 @@ setIsPublishModalOpen(isOpen) {
 schedulePost: (postId, date, time) => {
     const { openPosts, postContents, handlePostDelete } = get();
     const post = openPosts.find(p => p.id === postId);
-    if (!post) return;
+    if (!post) {
+        toast.error("Không tìm thấy bài đăng để lên lịch.");
+        return;
+    }
 
     const content = postContents[postId] || "";
-        const [hStr, rest] = String(time || '').split(':');
-        let hour = parseInt(hStr || '0', 10);
-        let minute = parseInt((rest || '0').slice(0, 2) || '0', 10);
-        const ampm = (time || '').toUpperCase().includes('PM');
-        if (ampm && hour < 12) hour += 12;
-        if (!ampm && hour === 12) hour = 0;
-        const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
-        const time24 = `${pad(hour)}:${pad(minute)}`;
+    if (!content.trim()) {
+        toast.warning("Không thể lên lịch một bài viết rỗng.");
+        return;
+    }
 
-        const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-        const eventId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const newEvent: CalendarEvent = {
-            id: eventId, platform: post.type, time: time24,
-            status: `scheduled ${time}`, noteType: 'yellow', content: content
-        };
+    const [hStr, rest] = String(time || '').split(':');
+    let hour = parseInt(hStr || '0', 10);
+    let minute = parseInt((rest || '0').slice(0, 2) || '0', 10);
+    const ampm = (time || '').toUpperCase().includes('PM');
+    if (ampm && hour < 12) hour += 12;
+    if (!ampm && hour === 12) hour = 0;
+    const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
+    const time24 = `${pad(hour)}:${pad(minute)}`;
 
-        set(state => {
-            const updatedEvents = { ...state.calendarEvents };
-            updatedEvents[key] = [...(updatedEvents[key] || []), newEvent];
-            saveToLocalStorage('calendarEvents', updatedEvents);
-            return { calendarEvents: updatedEvents };
-        });
-    console.log(`Đã lên lịch bài viết ID ${postId} cho ${post.type} vào ${date.toLocaleDateString()} lúc ${time}`);
+    const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+    const eventId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const newEvent: CalendarEvent = {
+        id: eventId, platform: post.type, time: time24,
+        status: `scheduled ${time}`, noteType: 'yellow', content: content
+    };
+
+    set(state => {
+        const updatedEvents = { ...state.calendarEvents };
+        updatedEvents[key] = [...(updatedEvents[key] || []), newEvent];
+        saveToLocalStorage('calendarEvents', updatedEvents);
+        return { calendarEvents: updatedEvents };
+    });
+
+    // Hiển thị thông báo thành công
+    const formattedDate = date.toLocaleDateString('vi-VN');
+    toast.success(`Đã lên lịch bài viết "${post.type}" vào ${time} ngày ${formattedDate}.`);
 
     // Sau khi lên lịch, xóa tab đang mở
     handlePostDelete(postId);
@@ -806,205 +1128,120 @@ generateImage: async (prompt, count, size, aspectRatio) => {
     if (!prompt.trim() || !selectedPostId) return;
 
     set({ isGeneratingMedia: true, isImageGenModalOpen: false });
-
-    // Thông báo cho người dùng qua chatbox
-    set(state => ({
-        chatMessages: [...state.chatMessages, { role: 'assistant', content: `🎨 Bắt đầu tạo ${count} ảnh với prompt: "${prompt}"...` }]
-    }));
+    
+    // 1. Hiển thị toast loading ngay lập tức
+    const loadingToastId = toast.loading(`Đang gửi yêu cầu tạo ${count} ảnh...`);
 
     try {
-      const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-      if (!GEMINI_API_KEY) throw new Error("Thiếu Gemini API Key");
+        const response = await fetch('/api/generate-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, n: count, size, aspectRatio }),
+        });
 
-      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      // Check if Gemini API is available
-      if (!genAI) {
-        throw new Error("Gemini API chưa được cấu hình. Vui lòng kiểm tra API Key.")
-      }
+        const data = await response.json();
 
-      try {
-        // Initialize NanoBanana model
-        const imageModel = genAI.getGenerativeModel({ 
-          model: "gemini-2.5-flash-image" 
-        })
-
-        // We send the prompt directly
-        const result = await imageModel.generateContent(prompt)
-
-        // Process the generated images
-        const candidates = result.response.candidates || []
-        
-        if (candidates.length === 0) {
-          throw new Error("Không thể tạo ảnh. API không trả về kết quả.")
+        if (!response.ok) {
+            throw new Error(data.details || data.error || `Yêu cầu thất bại với mã lỗi ${response.status}`);
+        }
+        if (!data.images || data.images.length === 0) {
+            throw new Error("API đã xử lý thành công nhưng không trả về hình ảnh nào.");
         }
 
-        const firstCandidate = candidates[0]
-        const parts = firstCandidate.content?.parts || []
-        
-        // Convert generated images to MediaFile format
-        const newMediaFiles: MediaFile[] = []
-        
-        // Gemini Flash Image returns: [text description, image1, image2, ...]
-        for (let i = 0; i < parts.length; i++) {
-          const part = parts[i]
-          
-          // Check if this part has image data
-          const imageData = part.inlineData?.data
-          const mimeType = part.inlineData?.mimeType
-          
-          if (imageData && mimeType && mimeType.startsWith('image/')) {
-            // Create a blob from base64 data
-            const byteCharacters = atob(imageData)
-            const byteNumbers = new Array(byteCharacters.length)
-            for (let j = 0; j < byteCharacters.length; j++) {
-              byteNumbers[j] = byteCharacters.charCodeAt(j)
+        const newMediaFiles: MediaFile[] = data.images.map((image: { base64: string; mimeType: string }, index: number) => {
+            // ... (logic chuyển đổi base64 giữ nguyên)
+            try {
+                const byteCharacters = atob(image.base64);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) { byteNumbers[i] = byteCharacters.charCodeAt(i); }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: image.mimeType });
+                const file = new File([blob], `gemini-image-${Date.now()}-${index}.png`, { type: image.mimeType });
+                const preview = URL.createObjectURL(blob);
+                return { id: `gemini-img-${Date.now()}-${index}`, type: 'image' as const, preview, file };
+            } catch (e) {
+                console.error("Lỗi khi xử lý dữ liệu base64 cho một ảnh:", e);
+                return null;
             }
-            const byteArray = new Uint8Array(byteNumbers)
-            const blob = new Blob([byteArray], { type: mimeType })
-            
-            // Create File object
-            const file = new File([blob], `gemini-image-${Date.now()}-${i}.png`, { type: mimeType })
-            const preview = URL.createObjectURL(blob)
-            
-            newMediaFiles.push({
-              id: `gemini-img-${Date.now()}-${i}`,
-              type: 'image',
-              preview: preview,
-              file: file
-            })
-          }
-        }
+        }).filter((file: MediaFile | null): file is MediaFile => file !== null);
 
-        // Add generated images to uploadedMedia state
         if (newMediaFiles.length > 0) {
-          set(state => ({
-            uploadedMedia: [...state.uploadedMedia, ...newMediaFiles],
-            chatMessages: [...state.chatMessages, { role: 'assistant', content: `✅ Đã tạo thành công ${newMediaFiles.length} ảnh và thêm vào bài viết.` }]
-          }));
-
+            set(state => ({
+                uploadedMedia: [...state.uploadedMedia, ...newMediaFiles]
+            }));
+            // 2. Cập nhật toast thành công
+            toast.success(`Đã tạo và thêm ${newMediaFiles.length} ảnh vào bài viết!`, { id: loadingToastId });
         } else {
-          throw new Error("Không thể trích xuất dữ liệu ảnh từ phản hồi API. API có thể chỉ trả về text description.")
+            throw new Error("Không thể xử lý dữ liệu hình ảnh nhận được từ API.");
         }
-        
-      } catch (error: any) {
-        // API error - log detailed error
-        const errorMessage = error instanceof Error ? error.message : "Lỗi không xác định";
-        console.error("Lỗi API khi tạo ảnh:", error);
-        set(state => ({
-          chatMessages: [...state.chatMessages, { role: 'assistant', content: `❌ Tạo ảnh thất bại: ${errorMessage}` }]
-        }));
-      } finally{
-        set({ isGeneratingMedia: false });
-      }
-      
-    } catch (error: any) {
-      const errorMessage = error instanceof Error ? error.message : "Lỗi không xác định";
-        console.error("Lỗi khi tạo ảnh:", error);
-        set(state => ({
-            chatMessages: [...state.chatMessages, { role: 'assistant', content: `❌ Tạo ảnh thất bại: ${errorMessage}` }]
-        }));
-      
-      
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Đã có lỗi không xác định xảy ra.";
+        console.error("Lỗi trong quá trình tạo ảnh (createPageStore):", error);
+        // 3. Cập nhật toast thành thất bại
+        toast.error(`Tạo ảnh thất bại: ${errorMessage}`, { id: loadingToastId });
     } finally {
-      set({ isGeneratingMedia: false, isImageGenModalOpen: false });
+        set({ isGeneratingMedia: false });
     }
 },
 
 setIsVideoGenModalOpen: (isOpen) => set({ isVideoGenModalOpen: isOpen }),
 
 generateVideo: async (prompt, negativePrompt, aspectRatio, resolution) => {
+  //Hiện tại lỗi ở Gemini API, tạm thời chưa test được chức năng này
     const { selectedPostId } = get();
     if (!prompt.trim() || !selectedPostId) return;
 
-    // 1. Cập nhật UI
     set({ isGeneratingMedia: true, isVideoGenModalOpen: false });
-    set(state => ({
-        chatMessages: [...state.chatMessages, { role: 'assistant', content: `🎬 Bắt đầu tạo video với Veo 3... Prompt: "${prompt}". Quá trình này có thể mất vài phút.` }]
-    }));
+    
+    // 1. Hiển thị toast loading ban đầu
+    const loadingToastId = toast.loading("Đang gửi yêu cầu tạo video đến AI...");
 
-    // 2. Logic gọi API Veo 3 (chuyển từ file gốc)
     try {
-        const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-        if (!GEMINI_API_KEY) throw new Error("API Key của Gemini chưa được cấu hình.");
-        
-        const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-
-        let operation = await ai.models.generateVideos({
-            model: "veo-3.0-fast-generate-001",
-            source: { prompt },
-            config: { numberOfVideos: 1, aspectRatio, resolution, negativePrompt }
+        const response = await fetch('/api/generate-video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, negativePrompt, aspectRatio, resolution }),
         });
-
-        set(state => ({
-            chatMessages: [...state.chatMessages, { role: 'assistant', content: `⏳ Video đang được xử lý... Operation đã được tạo.` }]
-        }));
         
-        // 3. Logic Polling (chờ kết quả)
-        let pollCount = 0;
-        while (!operation.done) {
-            console.log("Đang chờ video hoàn thành...");
-            await new Promise((resolve) => setTimeout(resolve, 10000)); // Chờ 10 giây
-            pollCount++;
-            
-            set(state => {
-                const newMessages = [...state.chatMessages];
-                const lastMessageIndex = newMessages.length - 1;
-                if (lastMessageIndex >= 0 && newMessages[lastMessageIndex].role === 'assistant') {
-                    newMessages[lastMessageIndex] = { role: 'assistant', content: `⏳ Đang xử lý... (${pollCount * 10}s). Veo 3 đang tạo video...` };
-                    return { chatMessages: newMessages };
-                }
-                return {};
-            });
-
-            operation = await ai.operations.getVideosOperation({ operation });
-
-            if (pollCount >= 60) { // Timeout sau 10 phút
-                throw new Error("Quá trình tạo video mất quá nhiều thời gian (timeout 10 phút).");
-            }
+        // --- Xử lý Blob Response ---
+        if (!response.ok) {
+            // Cố gắng đọc lỗi từ JSON nếu có
+            const errorData = await response.json().catch(() => ({ error: `Yêu cầu thất bại với mã lỗi ${response.status}` }));
+            throw new Error(errorData.details || errorData.error);
         }
 
-        // 4. Xử lý video khi đã hoàn thành
-        if (!operation.response?.generatedVideos?.[0]?.video) {
-            throw new Error("Không nhận được file video từ API.");
-        }
-        
-        const videoFile = operation.response.generatedVideos[0].video;
-        const videoUri = (videoFile as any).uri || (videoFile as any).fileUri;
-        if (!videoUri) throw new Error("Không tìm thấy URI của video.");
-
-        set(state => ({
-            chatMessages: [...state.chatMessages, { role: 'assistant', content: `📥 Đang tải video về...` }]
-        }));
-        
-        const response = await fetch(videoUri);
-        if (!response.ok) throw new Error(`Tải video thất bại: ${response.statusText}`);
+        // 2. Cập nhật toast khi video đang được xử lý
+        toast.loading("AI đang tạo video. Việc này có thể mất vài phút...", { id: loadingToastId });
 
         const videoBlob = await response.blob();
+        if (videoBlob.size === 0) {
+            throw new Error("API đã trả về một file video rỗng.");
+        }
+
         const file = new File([videoBlob], `veo3-video-${Date.now()}.mp4`, { type: 'video/mp4' });
         const preview = URL.createObjectURL(videoBlob);
         
         const newMediaFile: MediaFile = {
             id: `veo3-video-${Date.now()}`,
             type: 'video',
-            preview: preview,
-            file: file
+            preview,
+            file
         };
 
-        // 5. Cập nhật state thành công
         set(state => ({
-            uploadedMedia: [...state.uploadedMedia, newMediaFile],
-            chatMessages: [...state.chatMessages, { role: 'assistant', content: `✅ Video đã được tạo thành công và thêm vào bài viết! Kích thước: ${(videoBlob.size / 1024 / 1024).toFixed(2)} MB` }]
+            uploadedMedia: [...state.uploadedMedia, newMediaFile]
         }));
 
+        // 3. Cập nhật toast thành công
+        toast.success(`Video đã được tạo và thêm vào bài viết!`, { id: loadingToastId, duration: 5000 });
+
     } catch (error) {
-        // 6. Cập nhật state thất bại
         const errorMessage = error instanceof Error ? error.message : "Lỗi không xác định";
         console.error("Lỗi khi tạo video:", error);
-        set(state => ({
-            chatMessages: [...state.chatMessages, { role: 'assistant', content: `❌ Tạo video thất bại: ${errorMessage}` }]
-        }));
+        // 4. Cập nhật toast thành thất bại
+        toast.error(`Tạo video thất bại: ${errorMessage}`, { id: loadingToastId });
     } finally {
-        // 7. Luôn tắt trạng thái loading
         set({ isGeneratingMedia: false });
     }
 },

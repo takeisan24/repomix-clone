@@ -5,7 +5,7 @@
 
 'use client'
 
-import { getPlatformIcon, needsInversion } from '@/lib'
+import { getPlatformIcon, needsInversion } from '@/lib/utils/platform'
 
 interface PlatformIconProps {
   platform: string

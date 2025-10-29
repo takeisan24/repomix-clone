@@ -6,7 +6,7 @@
 'use client'
 
 import { useState } from 'react'
-import { needsInversion } from '@/lib'
+import { needsInversion } from '@/lib/utils/platform'
 
 interface PlatformOption {
   value: string

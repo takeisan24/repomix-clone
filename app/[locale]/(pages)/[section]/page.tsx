@@ -1,8 +1,8 @@
 "use client"
 
-import CreateLayout from "@/components/create/layout/CreateLayout"
-import MainContent from "@/components/create/layout/MainContent"
-import SectionsManager from "@/components/create/sections/SectionsManager"
+import CreateLayout from "@/components/features/create/layout/CreateLayout"
+import MainContent from "@/components/features/create/layout/MainContent"
+import SectionsManager from "@/components/features/create/SectionsManager"
 
 // import { useCreatePage } from "@/hooks/useCreatePage"
 import { useEffect } from "react"

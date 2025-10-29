@@ -6,7 +6,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { filterAndSortPosts } from '@/lib'
+import { filterAndSortPosts } from '@/lib/utils/filterUtils'
 
 interface FilterablePost {
   platform: string

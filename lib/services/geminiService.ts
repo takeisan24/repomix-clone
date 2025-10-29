@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Part} from "@google/generative-ai";
 import { GoogleGenAI } from "@google/genai";
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -55,15 +55,15 @@ export async function getChatResponse(modelName: string, history: any[], newMess
 }
 
 /**
- * Gửi một prompt đơn lẻ để tạo nội dung với một model Gemini cụ thể.
+ * Gửi một prompt (đơn giản hoặc đa phương thức) để tạo nội dung.
  * @param modelName Tên model để sử dụng.
- * @param prompt Câu lệnh chi tiết cho AI.
+ * @param promptParts Một chuỗi đơn giản hoặc một mảng các "Part" (text, fileData).
  * @returns Phản hồi dạng text từ AI.
  */
-export async function generateContent(modelName: string, prompt: string): Promise<string> {
+export async function generateContent(modelName: string, promptParts: (string | Part)[] | string): Promise<string> {
     try {
         const model = genAI.getGenerativeModel({ model: modelName});
-        const result = await model.generateContent(prompt);
+        const result = await model.generateContent(promptParts);
         return result.response.text();
     } catch (error) {
         console.error(`Gemini Service Error (generateContent with ${modelName}):`, error);
@@ -75,35 +75,75 @@ export async function generateContent(modelName: string, prompt: string): Promis
 // --- CÁC HÀM DỊCH VỤ CHO HÌNH ẢNH (Image Generation) ---
 
 /**
- * Tạo hình ảnh từ prompt bằng Imagen.
+ * Tạo hình ảnh từ prompt bằng model Gemini có khả năng tạo ảnh.
  * @param prompt Mô tả hình ảnh.
- * @param n Số lượng ảnh cần tạo.
- * @param size Kích thước ảnh ('1024x1024', '1792x1024', etc.).
- * @returns Mảng các đối tượng chứa dữ liệu base64 của ảnh.
+ * @param n Số lượng ảnh cần tạo (Lưu ý: model có thể không trả về chính xác số lượng yêu cầu).
+ * @param size Kích thước (hiện tại không được hỗ trợ trực tiếp, sẽ được xác định bởi model).
+ * @param aspectRatio Tỷ lệ khung hình (hiện tại không được hỗ trợ trực tiếp, sẽ được xác định bởi model).
+ * @returns Mảng các đối tượng chứa dữ liệu base64 và mimeType của ảnh.
+ */
+
+/**
+ * Tạo hình ảnh từ prompt bằng model Gemini có khả năng tạo ảnh.
+ * @param prompt Mô tả hình ảnh.
+ * @param n Số lượng ảnh cần tạo (Lưu ý: model có thể không trả về chính xác số lượng yêu cầu).
+ * @param size Kích thước ảnh (tham số này mang tính gợi ý cho model).
+ * @param aspectRatio Tỷ lệ khung hình (tham số này mang tính gợi ý cho model).
+ * @returns Mảng các đối tượng chứa dữ liệu base64 và mimeType của ảnh.
  */
 export async function generateImage(prompt: string, n: number, size: string, aspectRatio: string): Promise<{base64: string; mimeType: string;}[]> {
     try {
-        const imageModel = genAI.getGenerativeModel({ model: "gemini-2.5-image" });
-        const result = await imageModel.generateContent([prompt]);
+        // BƯỚC 1: Đổi sang model có khả năng tạo ảnh mạnh mẽ nhất
+        const imageModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash-image" });
 
-        const candidates = result.response.candidates || [];
+        // BƯỚC 2: Tạo một prompt đa phần rõ ràng, ra lệnh cho AI
+        // Phần đầu là chỉ dẫn, phần sau là nội dung của người dùng.
+        const promptParts = [
+            `Generate ${n} high-quality, photorealistic image(s) based on the following description. Adhere to the requested aspect ratio of ${aspectRatio}. The style should be modern and clean. Do not include any text in the image unless explicitly asked. The user's description is: `,
+            prompt
+        ];
 
-        if (candidates.length === 0) {
-            throw new Error("No images generated.");
+        const result = await imageModel.generateContent(promptParts);
+        const response = result.response;
+        
+        // BƯỚC 3: Xử lý phản hồi một cách an toàn hơn
+        const candidates = response.candidates;
+        if (!candidates || candidates.length === 0) {
+            // Trường hợp này hiếm, nhưng cần kiểm tra
+            throw new Error("API không trả về bất kỳ ứng viên (candidate) nào.");
         }
 
-        const imageParts = candidates[0].content?.parts.filter(part => part.inlineData) || [];
-
-        if (imageParts.length === 0) {
-            throw new Error("No image data found in response.");
+        // Lấy các "parts" từ ứng viên đầu tiên
+        const contentParts = candidates[0].content?.parts;
+        if (!contentParts) {
+             // Nếu model từ chối hoặc chỉ trả về text, nó sẽ không có 'parts' chứa 'inlineData'
+            const refusalText = response.text(); // Lấy lý do từ chối (nếu có)
+            console.error("Phản hồi của Gemini không chứa 'parts':", refusalText);
+            throw new Error(`Model đã từ chối tạo ảnh hoặc có lỗi xảy ra. Phản hồi: "${refusalText}"`);
         }
-        return imageParts.map(part => ({
-            base64: part.inlineData!.data,
-            mimeType: part.inlineData!.mimeType,
-        }));
+
+        // Lọc ra chính xác các part là hình ảnh
+        const imageParts = contentParts.filter(part => part.inlineData && part.inlineData.data && part.inlineData.mimeType.startsWith('image/'));
+
+        // Dòng 105 sẽ được kiểm tra ở đây
+        if (!imageParts || imageParts.length === 0) {
+            const refusalText = response.text();
+            console.error("Đã nhận được phản hồi, nhưng không tìm thấy dữ liệu hình ảnh. Phản hồi text từ AI:", refusalText);
+            throw new Error("Không tìm thấy dữ liệu hình ảnh trong phản hồi. Model có thể đã từ chối yêu cầu vì chính sách an toàn hoặc prompt không rõ ràng.");
+        }
+
+        return imageParts.map(part => {
+            // TypeScript biết chắc chắn part.inlineData tồn tại ở đây
+            return {
+                base64: part.inlineData!.data,
+                mimeType: part.inlineData!.mimeType,
+            };
+        });
+
     } catch (error) {
-        console.error("Gemini Service Error (generateImage):", error);
-        throw new Error("Failed to generate image from Gemini.");
+        console.error("Lỗi trong Gemini Service (generateImage):", error);
+        const errorMessage = error instanceof Error ? error.message : "Lỗi không xác định khi tạo ảnh.";
+        throw new Error(`Tạo ảnh thất bại: ${errorMessage}`);
     }
 }
 

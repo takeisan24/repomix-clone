@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation"
-import { saveToLocalStorage, loadFromLocalStorage } from "@/lib"
-import { CalendarEvent } from "@/lib"
+import { saveToLocalStorage, loadFromLocalStorage } from "@/lib/utils/storage"
+import { CalendarEvent } from "@/lib/types/calendar"
 
 /**
  * Main hook for managing create page state and functionality

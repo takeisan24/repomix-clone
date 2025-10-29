@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
+import { Toaster } from 'sonner'
 
 import "./globals.css"
 
@@ -34,6 +35,7 @@ export default async function RootLayout({
           <Suspense fallback={null}>
             {children}
           </Suspense>
+          <Toaster theme="dark" richColors position="bottom-left"/>
           <Analytics />
         </NextIntlClientProvider>
       </body>
