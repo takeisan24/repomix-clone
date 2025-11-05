@@ -1,9 +1,9 @@
-# Shaders Hero Section
+# Landing page structure
 
 *Automatically synced with your [v0.app](https://v0.app) deployments*
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/nex2udna-6303s-projects/v0-shaders-hero-section)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/EtrsyfHGQA1)
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/takeisan24s-projects/v0-landing-page-structure)
+[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/7gYBLe80744)
 
 ## Overview
 
@@ -14,13 +14,13 @@ Any changes you make to your deployed app will be automatically pushed to this r
 
 Your project is live at:
 
-**[https://vercel.com/nex2udna-6303s-projects/v0-shaders-hero-section](https://vercel.com/nex2udna-6303s-projects/v0-shaders-hero-section)**
+**[https://vercel.com/takeisan24s-projects/v0-landing-page-structure](https://vercel.com/takeisan24s-projects/v0-landing-page-structure)**
 
 ## Build your app
 
 Continue building your app on:
 
-**[https://v0.app/chat/projects/EtrsyfHGQA1](https://v0.app/chat/projects/EtrsyfHGQA1)**
+**[https://v0.app/chat/projects/7gYBLe80744](https://v0.app/chat/projects/7gYBLe80744)**
 
 ## How It Works
 
