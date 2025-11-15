@@ -1,0 +1,142 @@
+﻿using System;
+using System.Collections;
+using UnityEngine;
+
+public class Entity : MonoBehaviour
+{
+    protected Animator anim;
+    protected Rigidbody2D rb;
+    protected Collider2D col;
+    protected SpriteRenderer sr;
+    protected Material originalMaterial;
+    [Header("Health")]
+    [SerializeField] protected float maxHealth = 5;
+    [SerializeField] protected float currentHealth;
+    [SerializeField] private Material damageMaterial;
+    [SerializeField] private float damageFeedbackDuration = 0.1f;
+    private Coroutine damageFeedbackCoroutine;
+    [Header("Attack details")]
+    [SerializeField] protected float attackRadius;
+    [SerializeField] protected Transform attackPoint;
+    [SerializeField] protected LayerMask whatIsTarget;
+    [SerializeField] public float attackDamage = 1f;
+
+    protected bool facingRight = true;
+    protected int facingDir=1;
+    protected bool canMove = true;
+    [Header("Collision details")]
+    [SerializeField] private float groundCheckDistance;
+    protected bool isGrounded;
+    [SerializeField] private LayerMask whatIsGround;
+    protected virtual void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+        anim = GetComponentInChildren<Animator>();
+        col = GetComponent<Collider2D>();
+        sr=GetComponentInChildren<SpriteRenderer>();
+        originalMaterial = sr.material;
+        currentHealth = maxHealth;
+    }
+    protected virtual void Update()
+    {
+        HandleCollision();  
+        HandleMovement();
+        HandleFlip();
+        HandleAnimation();
+    }
+
+    public void DamageTargets(float damage)
+    {
+        Collider2D[] enemyColliders=Physics2D.OverlapCircleAll(attackPoint.position, attackRadius, whatIsTarget);
+        foreach (Collider2D enemy in enemyColliders)
+        {
+            enemy.GetComponent<Entity>().TakeDamage(damage);
+        }
+    }
+    public virtual void TakeDamage(float damage)
+    {
+        currentHealth-=damage;
+        PlayDamageFeedback();
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
+    }
+    private void PlayDamageFeedback()
+    {
+        if (damageFeedbackCoroutine != null)
+        {
+            StopCoroutine(damageFeedbackCoroutine);
+        }
+        damageFeedbackCoroutine = StartCoroutine(DamageFeedbackCo());
+    }
+    private IEnumerator DamageFeedbackCo()
+    {
+        sr.material = damageMaterial;
+        yield return new WaitForSeconds(damageFeedbackDuration);
+        sr.material = originalMaterial;
+    }
+    protected virtual void Die()
+    {
+        anim.enabled = false;
+        col.enabled = false;
+        rb.gravityScale = 12;
+        rb.linearVelocity = new Vector2(rb.linearVelocityY,15);
+        Destroy(gameObject, 3f);
+    }
+
+    public virtual void EnableMovementAndJump(bool enable)
+    {
+        canMove = enable;
+        if (!enable)
+        {
+            rb.linearVelocity = new Vector2(0, rb.linearVelocityY);
+        }
+    }
+    protected void HandleAnimation()
+    {
+        anim.SetBool("isGrounded", isGrounded);
+        anim.SetFloat("yVelocity", rb.linearVelocityY);
+        anim.SetFloat("xVelocity", rb.linearVelocityX);
+    }
+
+    protected virtual void HandleMovement()
+    {
+        
+    }
+    protected virtual void HandleAttack()
+    {
+        if (isGrounded)
+        {
+            anim.SetTrigger("attack");
+            rb.linearVelocity=new Vector2(0, rb.linearVelocityY);
+        }
+    }
+    protected virtual void HandleFlip()
+    {
+        if(rb.linearVelocityX > 0 && !facingRight)
+        {
+            Flip();
+        }
+        else if(rb.linearVelocityX < 0 && facingRight)
+        {
+            Flip();
+        }
+    }
+    public virtual void Flip()
+    {
+        facingRight = !facingRight;
+        transform.Rotate(0f, 180f, 0f);
+        facingDir *= -1;
+    }
+    protected virtual void HandleCollision()
+    {
+        isGrounded=Physics2D.Raycast(transform.position, Vector2.down, groundCheckDistance, whatIsGround);
+    }
+    protected virtual void OnDrawGizmos()
+    {
+        Gizmos.color=Color.red;
+        Gizmos.DrawLine(transform.position, transform.position + new Vector3(0, - groundCheckDistance));
+        if(attackPoint!=null) Gizmos.DrawWireSphere(attackPoint.position, attackRadius);  
+    }
+}
