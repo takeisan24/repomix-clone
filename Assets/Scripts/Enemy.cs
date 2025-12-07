@@ -6,7 +6,7 @@ public class Enemy : Entity
     private bool playerDectected;
     [Header("Movement details")]
     [SerializeField] protected float speed = 5f;
-    protected override void     Update()
+    protected override void Update()
     {
         base.Update();
         HandleAttack();
