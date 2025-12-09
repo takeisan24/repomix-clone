@@ -9,12 +9,15 @@ public class Entity : MonoBehaviour
     protected Collider2D col;
     protected SpriteRenderer sr;
     protected Material originalMaterial;
+
     [Header("Health")]
     [SerializeField] protected float maxHealth = 5;
     [SerializeField] protected float currentHealth;
     [SerializeField] private Material damageMaterial;
     [SerializeField] private float damageFeedbackDuration = 0.1f;
+
     private Coroutine damageFeedbackCoroutine;
+
     [Header("Attack details")]
     [SerializeField] protected float attackRadius;
     [SerializeField] protected Transform attackPoint;

@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &7897884056642558429
+--- !u!1 &1986426922425343959
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,45 +8,71 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 2879185657196284870}
-  - component: {fileID: 8748276685912005066}
-  - component: {fileID: 2632773326886209928}
-  - component: {fileID: 6173142739979112056}
-  - component: {fileID: 5001647932045925443}
-  - component: {fileID: 4980102828001846784}
-  - component: {fileID: 2145846311150360667}
-  - component: {fileID: 7783598248775371064}
-  - component: {fileID: 1577329871624109582}
+  - component: {fileID: 8120902400287637558}
   m_Layer: 7
-  m_Name: Mushroom
+  m_Name: AttackPoint
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &2879185657196284870
+--- !u!4 &8120902400287637558
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7897884056642558429}
+  m_GameObject: {fileID: 1986426922425343959}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -4.89, y: -3.22, z: 0}
+  m_LocalPosition: {x: 1.06, y: -0.66, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 2879185657196284870}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!95 &8748276685912005066
+--- !u!1 &3296598156765627068
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8887107502265059921}
+  - component: {fileID: 3638470246635216364}
+  - component: {fileID: 8369819982080928971}
+  - component: {fileID: 7535939879793976418}
+  m_Layer: 7
+  m_Name: Animator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8887107502265059921
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3296598156765627068}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2879185657196284870}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!95 &3638470246635216364
 Animator:
   serializedVersion: 7
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7897884056642558429}
+  m_GameObject: {fileID: 3296598156765627068}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
   m_Controller: {fileID: 9100000, guid: fda98bc03587da9469eea5904295ccfb, type: 2}
@@ -61,13 +87,13 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!212 &2632773326886209928
+--- !u!212 &8369819982080928971
 SpriteRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7897884056642558429}
+  m_GameObject: {fileID: 3296598156765627068}
   m_Enabled: 1
   m_CastShadows: 0
   m_ReceiveShadows: 0
@@ -119,44 +145,55 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!70 &6173142739979112056
-CapsuleCollider2D:
+--- !u!114 &7535939879793976418
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3296598156765627068}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 572bc553a0a959d46aed4c219203e259, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Entity_AnimationEvents
+--- !u!1 &7897884056642558429
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2879185657196284870}
+  - component: {fileID: 8232730288953287538}
+  - component: {fileID: 2944398975811433318}
+  - component: {fileID: 7087397090316360544}
+  m_Layer: 7
+  m_Name: Mushroom
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2879185657196284870
+Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7897884056642558429}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Density: 1
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ForceSendLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ForceReceiveLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ContactCaptureLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_CallbackLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_IsTrigger: 0
-  m_UsedByEffector: 0
-  m_CompositeOperation: 0
-  m_CompositeOrder: 0
-  m_Offset: {x: 0.00000166893, y: -0.48172712}
-  m_Size: {x: 1.6645045, y: 2.588006}
-  m_Direction: 0
---- !u!114 &5001647932045925443
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -4.89, y: -3.22, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 8887107502265059921}
+  - {fileID: 8120902400287637558}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8232730288953287538
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -168,48 +205,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 034e880dfb240874397a4e3b49f06525, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Mushroom
-  redColorDuration: 1
---- !u!114 &4980102828001846784
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7897884056642558429}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a09ec6e86ce02754badd6ada94ac4d5d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Enemy
-  maxHealth: 1
+  maxHealth: 5
   currentHealth: 0
   damageMaterial: {fileID: 2100000, guid: f0222d3bea2a0e24994bf0df402d571d, type: 2}
   damageFeedbackDuration: 0.1
-  attackRadius: 1
-  attackPoint: {fileID: 0}
+  attackRadius: 1.5
+  attackPoint: {fileID: 8120902400287637558}
   whatIsTarget:
     serializedVersion: 2
     m_Bits: 256
   attackDamage: 1
-  groundCheckDistance: 1.08
+  groundCheckDistance: 0
   whatIsGround:
     serializedVersion: 2
     m_Bits: 64
-  speed: 2
---- !u!114 &2145846311150360667
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7897884056642558429}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 034e880dfb240874397a4e3b49f06525, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Mushroom
-  redColorDuration: 1
---- !u!50 &7783598248775371064
+  speed: 3
+--- !u!50 &2944398975811433318
 Rigidbody2D:
   serializedVersion: 5
   m_ObjectHideFlags: 0
@@ -236,7 +247,7 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 4
---- !u!70 &1577329871624109582
+--- !u!70 &7087397090316360544
 CapsuleCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -270,6 +281,6 @@ CapsuleCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0.027127743, y: -0.45484114}
-  m_Size: {x: 1.9633789, y: 2.5970469}
+  m_Offset: {x: 0.020938158, y: -0.41669452}
+  m_Size: {x: 1.722856, y: 2.6117618}
   m_Direction: 0

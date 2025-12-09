@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class Mushroom : Entity
+public class Goblin : Entity
 {
     private bool playerDectected;
     [Header("Movement details")]

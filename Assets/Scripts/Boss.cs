@@ -1,89 +1,161 @@
 // File: Assets/Scripts/Boss.cs
 using UnityEngine;
-using System.Collections; // Cần thêm dòng này để dùng Coroutine
+using System.Collections;
 
-public class Boss : Enemy // Kế thừa từ Enemy để có sẵn các thuộc tính cơ bản
+public class Boss : Enemy
 {
-    // Sử dụng enum để quản lý các trạng thái của Boss một cách rõ ràng
-    public enum BossState { WakingUp, Chasing, Attacking, Idle }
+    // Boss state management
+    public enum BossState { WakingUp, Chasing, Attacking, Idle, Dead }
 
-    [Header("Boss Specifics")]
-    [SerializeField] private float attackRange = 3f;      // Tầm tấn công
-    [SerializeField] private float attackCooldown = 2.5f;   // Thời gian nghỉ giữa các đòn tấn công
-    [SerializeField] private Transform playerTransform; // Tham chiếu đến người chơi để boss biết đuổi theo ai
-    private float lastAttackTime;
+    [Header("Boss Settings")]
+    [SerializeField] private float attackRange = 3f;
+    [SerializeField] private float attackCooldown = 2.5f;
+    [SerializeField] private float wakeUpDuration = 1.5f;
+    [SerializeField] private Transform playerTransform;
 
     private BossState currentState;
+    private float lastAttackTime;
+    private bool isPerformingAction;
 
-    // Ghi đè (override) lại hàm Awake của lớp cha để thiết lập ban đầu
+    #region Unity Lifecycle
+
     protected override void Awake()
     {
-        base.Awake(); // Gọi hàm Awake của lớp Entity để lấy các component
-        currentState = BossState.WakingUp; // Trạng thái ban đầu khi boss xuất hiện
+        base.Awake();
+        currentState = BossState.WakingUp;
         StartCoroutine(WakeUpSequence());
     }
 
-    // Ghi đè lại hàm Update của lớp cha để có hành vi riêng
     protected override void Update()
     {
-        // Không gọi base.Update() vì chúng ta muốn một logic hoàn toàn mới
+        if (currentState == BossState.Dead || currentState == BossState.WakingUp)
+            return;
 
-        // Chỉ chạy AI chính nếu boss đã "thức dậy"
-        if (currentState != BossState.WakingUp)
+        base.HandleCollision();
+        base.HandleAnimation();
+
+        UpdateBossAI();
+    }
+
+    #endregion
+
+    #region AI Logic
+
+    private void UpdateBossAI()
+    {
+        switch (currentState)
         {
-            base.HandleCollision(); // Vẫn dùng HandleCollision của lớp cha để check ground
-            base.HandleAnimation(); // Vẫn dùng HandleAnimation của lớp cha để cập nhật yVelocity...
+            case BossState.Chasing:
+                HandleChasing();
+                break;
 
-            // AI đơn giản dựa trên trạng thái
-            switch (currentState)
-            {
-                case BossState.Chasing:
-                    HandleMovement(); // Di chuyển về phía người chơi
-                    // Nếu người chơi trong tầm tấn công, và đã hết cooldown
-                    if (Vector2.Distance(transform.position, playerTransform.position) < attackRange && Time.time > lastAttackTime + attackCooldown)
-                    {
-                        currentState = BossState.Attacking;
-                        HandleAttack();
-                    }
-                    break;
+            case BossState.Attacking:
+                HandleAttackingState();
+                break;
 
-                // Các trạng thái khác được xử lý bởi Coroutine hoặc Animation Event
-                case BossState.Attacking:
-                case BossState.Idle:
-                    rb.linearVelocity = new Vector2(0, rb.linearVelocityY); // Đứng yên
-                    break;
-            }
+            case BossState.Idle:
+                HandleIdleState();
+                break;
         }
     }
 
-    // Coroutine cho hiệu ứng "thức giấc" ban đầu
-    private IEnumerator WakeUpSequence()
+    private void HandleChasing()
     {
-        // Giả sử có animation thức dậy, hoặc chỉ đơn giản là đợi một chút
-        yield return new WaitForSeconds(1.5f);
-        currentState = BossState.Chasing; // Bắt đầu đuổi theo người chơi
+        if (playerTransform == null)
+        {
+            currentState = BossState.Idle;
+            return;
+        }
+
+        HandleMovement();
+          
+        // Check if player is in attack range
+        float distanceToPlayer = Vector2.Distance(transform.position, playerTransform.position);
+        if (distanceToPlayer < attackRange && CanAttack())
+        {
+            TransitionToAttack();
+        }
     }
+
+    private void HandleAttackingState()
+    {
+        // Keep boss stationary during attack animation
+        rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+    }
+
+    private void HandleIdleState()
+    {
+        rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+
+        // Return to chasing if player is found
+        if (playerTransform != null)
+        {
+            currentState = BossState.Chasing;
+        }
+    }
+
+    #endregion
+
+    #region Movement
 
     protected override void HandleMovement()
     {
-        if (playerTransform == null) return; // Nếu không có người chơi thì không làm gì
+        if (playerTransform == null || !canMove)
+        {
+            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+            return;
+        }
 
-        // Logic di chuyển đơn giản: luôn hướng về người chơi
-        if (playerTransform.position.x > transform.position.x && facingDir == -1)
-            Flip();
-        else if (playerTransform.position.x < transform.position.x && facingDir == 1)
-            Flip();
+        // Face towards player
+        UpdateFacingDirection();
 
-        rb.linearVelocity = new Vector2(speed * facingDir, rb.linearVelocityY);
+        // Move towards player
+        rb.linearVelocity = new Vector2(speed * facingDir, rb.linearVelocity.y);
     }
+
+    private void UpdateFacingDirection()
+    {
+        if (playerTransform.position.x > transform.position.x && facingDir == -1)
+        {
+            Flip();
+        }
+        else if (playerTransform.position.x < transform.position.x && facingDir == 1)
+        {
+            Flip();
+        }
+    }
+
+    #endregion
+
+    #region Combat
 
     protected override void HandleAttack()
     {
-        rb.linearVelocity = new Vector2(0, rb.linearVelocityY); // Đứng yên khi tấn công
+        // This method is called when we want to initiate an attack
+        // But we use TransitionToAttack() instead for better control
+    }
+
+    private bool CanAttack()
+    {
+        return Time.time >= lastAttackTime + attackCooldown && !isPerformingAction;
+    }
+
+    private void TransitionToAttack()
+    {
+        currentState = BossState.Attacking;
+        isPerformingAction = true;
         lastAttackTime = Time.time;
 
-        // Chọn ngẫu nhiên 1 trong 2 đòn tấn công
+        rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+
+        // Choose random attack
+        PerformRandomAttack();
+    }
+
+    private void PerformRandomAttack()
+    {
         int attackIndex = Random.Range(0, 2);
+        
         if (attackIndex == 0)
         {
             anim.SetTrigger("attackSlash");
@@ -94,34 +166,84 @@ public class Boss : Enemy // Kế thừa từ Enemy để có sẵn các thuộc
         }
     }
 
-    // Hàm này sẽ được gọi ở cuối animation tấn công bằng Animation Event
+    #endregion
+
+    #region Animation Events
+
+    // Called by Animation Event at the end of attack animations
     public void FinishAttack()
     {
-        currentState = BossState.Chasing; // Quay lại trạng thái đuổi theo
+        isPerformingAction = false;
+        currentState = BossState.Chasing;
     }
 
-    // Hàm này sẽ được gọi ở giữa animation tấn công Chém bằng Animation Event
+    // Called by Animation Event during slash attack
     public void PerformSlashDamage()
     {
-        // TODO: Tạo một vùng sát thương phía trước boss
-        Debug.Log("Boss tung chiêu CHÉM!");
+        // Deal damage in front of boss
+        DamageTargets(attackDamage);
+        Debug.Log("Boss performs SLASH attack!");
     }
 
-    // Hàm này sẽ được gọi ở giữa animation tấn công Triệu hồi bằng Animation Event
+    // Called by Animation Event during summon attack
     public void PerformSummon()
     {
-        // TODO: Triệu hồi đệ hoặc bắn ra viên đạn
-        Debug.Log("Boss tung chiêu TRIỆU HỒI!");
+        // Spawn minions or projectiles
+        Debug.Log("Boss performs SUMMON attack!");
+        // TODO: Implement summoning logic
     }
 
-    // Ghi đè hàm Die để thêm hiệu ứng đặc biệt nếu cần
+    #endregion
+
+    #region State Transitions
+
+    private IEnumerator WakeUpSequence()
+    {
+        isPerformingAction = true;
+        
+        // Play wake up animation if you have one
+        // anim.SetTrigger("wakeUp");
+        
+        yield return new WaitForSeconds(wakeUpDuration);
+        
+        currentState = BossState.Chasing;
+        isPerformingAction = false;
+    }
+
+    #endregion
+
+    #region Death
+
     protected override void Die()
     {
+        if (currentState == BossState.Dead)
+            return;
+
+        currentState = BossState.Dead;
         base.Die();
-        // Thêm logic khi boss chết, ví dụ: thắng game, rơi đồ xịn...
-        Debug.Log("BOSS ĐÃ BỊ TIÊU DIỆT!");
-        // Ngăn không cho boss hoạt động nữa
+
+        // Boss-specific death logic
+        Debug.Log("BOSS DEFEATED!");
+        
+        // Disable boss functionality
         this.enabled = false;
-        rb.bodyType = RigidbodyType2D.Static; // Đóng băng vật lý
+        rb.bodyType = RigidbodyType2D.Static;
+
+        // TODO: Trigger victory sequence, spawn rewards, etc.
     }
+
+    #endregion
+
+    #region Debug
+
+    protected override void OnDrawGizmos()
+    {
+        base.OnDrawGizmos();
+
+        // Draw attack range
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, attackRange);
+    }
+
+    #endregion
 }

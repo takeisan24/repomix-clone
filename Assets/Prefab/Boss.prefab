@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &5286682572695991896
+--- !u!1 &2210251147584004961
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,42 +8,39 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1124412870728903078}
-  - component: {fileID: 6144587438101344638}
-  - component: {fileID: 7613130999778108293}
-  - component: {fileID: 2079293867213299813}
-  - component: {fileID: 2423795597419972411}
-  - component: {fileID: 5609059454448174732}
+  - component: {fileID: 2144094865981743335}
+  - component: {fileID: 2890880126297221619}
+  - component: {fileID: 8402565959366964305}
   m_Layer: 0
-  m_Name: Boss
+  m_Name: Animator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1124412870728903078
+--- !u!4 &2144094865981743335
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5286682572695991896}
+  m_GameObject: {fileID: 2210251147584004961}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -6.64, y: -2.15, z: 0}
-  m_LocalScale: {x: 1.2, y: 1.2, z: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1124412870728903078}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!95 &6144587438101344638
+--- !u!95 &2890880126297221619
 Animator:
   serializedVersion: 7
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5286682572695991896}
+  m_GameObject: {fileID: 2210251147584004961}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
   m_Controller: {fileID: 9100000, guid: 910a7c4f2e4cdab4c99c1da11fada1c3, type: 2}
@@ -58,13 +55,13 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!212 &7613130999778108293
+--- !u!212 &8402565959366964305
 SpriteRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5286682572695991896}
+  m_GameObject: {fileID: 2210251147584004961}
   m_Enabled: 1
   m_CastShadows: 0
   m_ReceiveShadows: 0
@@ -116,6 +113,73 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!1 &3659667411342857924
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1624824481978122300}
+  m_Layer: 0
+  m_Name: AttackPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1624824481978122300
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3659667411342857924}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.75, y: -0.83, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1124412870728903078}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &5286682572695991896
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1124412870728903078}
+  - component: {fileID: 2079293867213299813}
+  - component: {fileID: 2423795597419972411}
+  - component: {fileID: 5609059454448174732}
+  m_Layer: 0
+  m_Name: Boss
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1124412870728903078
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5286682572695991896}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -6.64, y: -2.15, z: 0}
+  m_LocalScale: {x: 1.2, y: 1.2, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2144094865981743335}
+  - {fileID: 1624824481978122300}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2079293867213299813
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -130,10 +194,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Boss
   maxHealth: 500
   currentHealth: 200
-  damageMaterial: {fileID: 0}
+  damageMaterial: {fileID: 2100000, guid: f0222d3bea2a0e24994bf0df402d571d, type: 2}
   damageFeedbackDuration: 0.1
   attackRadius: 1.5
-  attackPoint: {fileID: 0}
+  attackPoint: {fileID: 1624824481978122300}
   whatIsTarget:
     serializedVersion: 2
     m_Bits: 256
@@ -145,6 +209,7 @@ MonoBehaviour:
   speed: 2
   attackRange: 5
   attackCooldown: 3
+  wakeUpDuration: 1.5
   playerTransform: {fileID: 0}
 --- !u!50 &2423795597419972411
 Rigidbody2D:
