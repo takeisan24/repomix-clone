@@ -1,249 +1,232 @@
-// File: Assets/Scripts/Boss.cs
 using UnityEngine;
 using System.Collections;
 
-public class Boss : Enemy
+// Kế thừa MonoBehaviour: Độc lập hoàn toàn, không dính dáng gì đến Entity/Enemy
+public class Boss : MonoBehaviour
 {
-    // Boss state management
-    public enum BossState { WakingUp, Chasing, Attacking, Idle, Dead }
+    private Animator anim;
+    private Rigidbody2D rb;
+    private SpriteRenderer sr;
+    private Material originalMaterial;
 
-    [Header("Boss Settings")]
-    [SerializeField] private float attackRange = 3f;
-    [SerializeField] private float attackCooldown = 2.5f;
-    [SerializeField] private float wakeUpDuration = 1.5f;
-    [SerializeField] private Transform playerTransform;
+    // --- 1. CÁC CHỈ SỐ CƠ BẢN (Tự khai báo lại) ---
+    [Header("Health Settings")]
+    [SerializeField] protected float maxHealth = 5;
+    [SerializeField] protected float currentHealth;
+    [SerializeField] private Material damageMaterial;
+    [SerializeField] private float damageFeedbackDuration = 0.1f; // Kéo Material nháy trắng vào đây
 
+    [Header("Movement & Physics")]
+    [SerializeField] private float moveSpeed = 2f;
+    [SerializeField] private Transform playerTransform; // Kéo Player vào đây
+    protected bool facingRight = true;
+    protected bool canMove = true;
+    private int facingDir = 1;
+    private bool isDead = false;
+
+    [Header("Collision details")]
+    [SerializeField] private float groundCheckDistance;
+    protected bool isGrounded;
+    [SerializeField] private LayerMask whatIsGround;
+
+    // --- 2. AI & COMBAT ---
+    public enum BossState { WakingUp, Chasing, Attacking }
     private BossState currentState;
+
+    [Header("Combat")]
+    [SerializeField] protected float attackRadius;
+    [SerializeField] protected float attackCooldown = 2f;
+    [SerializeField] protected Transform attackPoint;
+    [SerializeField] protected LayerMask whatIsTarget;
+    [SerializeField] public float attackDamage = 1f;
+
     private float lastAttackTime;
-    private bool isPerformingAction;
+    private bool isBusy = false; 
 
-    #region Unity Lifecycle
+    [Header("Summon")]
+    [SerializeField] private GameObject[] minions;
+    [SerializeField] private Transform[] summonPoints;
 
-    protected override void Awake()
+    // --- 3. UNITY LIFECYCLE ---
+    private void Awake()
     {
-        base.Awake();
+        rb = GetComponent<Rigidbody2D>();
+        anim = GetComponentInChildren<Animator>();
+        sr = GetComponentInChildren<SpriteRenderer>();
+        if (sr) originalMaterial = sr.material;
+
+        currentHealth = maxHealth;
         currentState = BossState.WakingUp;
         StartCoroutine(WakeUpSequence());
     }
 
-    protected override void Update()
+    private void Update()
     {
-        if (currentState == BossState.Dead || currentState == BossState.WakingUp)
-            return;
+        Debug.Log("Boss State: " + currentState);
 
-        base.HandleCollision();
-        base.HandleAnimation();
+        if (isDead || currentState == BossState.WakingUp) return;
 
-        UpdateBossAI();
-    }
+        anim.SetFloat("xVelocity", Mathf.Abs(rb.linearVelocity.x));
 
-    #endregion
-
-    #region AI Logic
-
-    private void UpdateBossAI()
-    {
+        // Máy trạng thái (State Machine)
         switch (currentState)
         {
             case BossState.Chasing:
-                HandleChasing();
+                LogicChasing();
                 break;
-
             case BossState.Attacking:
-                HandleAttackingState();
-                break;
-
-            case BossState.Idle:
-                HandleIdleState();
+                // Đang tấn công thì đứng yên
+                rb.linearVelocity = Vector2.zero;
                 break;
         }
     }
 
-    private void HandleChasing()
+    // --- 4. AI LOGIC ---
+    private void LogicChasing()
     {
-        if (playerTransform == null)
+        if (playerTransform == null) return;
+
+        float dist = Vector2.Distance(transform.position, playerTransform.position);
+
+        if (!isBusy)
         {
-            currentState = BossState.Idle;
-            return;
+            if (playerTransform.position.x > transform.position.x && facingDir == -1) Flip();
+            else if (playerTransform.position.x < transform.position.x && facingDir == 1) Flip();
         }
 
-        HandleMovement();
-          
-        // Check if player is in attack range
-        float distanceToPlayer = Vector2.Distance(transform.position, playerTransform.position);
-        if (distanceToPlayer < attackRange && CanAttack())
+        if (dist < attackRadius)
         {
-            TransitionToAttack();
-        }
-    }
-
-    private void HandleAttackingState()
-    {
-        // Keep boss stationary during attack animation
-        rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
-    }
-
-    private void HandleIdleState()
-    {
-        rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
-
-        // Return to chasing if player is found
-        if (playerTransform != null)
-        {
-            currentState = BossState.Chasing;
-        }
-    }
-
-    #endregion
-
-    #region Movement
-
-    protected override void HandleMovement()
-    {
-        if (playerTransform == null || !canMove)
-        {
-            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
-            return;
-        }
-
-        // Face towards player
-        UpdateFacingDirection();
-
-        // Move towards player
-        rb.linearVelocity = new Vector2(speed * facingDir, rb.linearVelocity.y);
-    }
-
-    private void UpdateFacingDirection()
-    {
-        if (playerTransform.position.x > transform.position.x && facingDir == -1)
-        {
-            Flip();
-        }
-        else if (playerTransform.position.x < transform.position.x && facingDir == 1)
-        {
-            Flip();
-        }
-    }
-
-    #endregion
-
-    #region Combat
-
-    protected override void HandleAttack()
-    {
-        // This method is called when we want to initiate an attack
-        // But we use TransitionToAttack() instead for better control
-    }
-
-    private bool CanAttack()
-    {
-        return Time.time >= lastAttackTime + attackCooldown && !isPerformingAction;
-    }
-
-    private void TransitionToAttack()
-    {
-        currentState = BossState.Attacking;
-        isPerformingAction = true;
-        lastAttackTime = Time.time;
-
-        rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
-
-        // Choose random attack
-        PerformRandomAttack();
-    }
-
-    private void PerformRandomAttack()
-    {
-        int attackIndex = Random.Range(0, 2);
-        
-        if (attackIndex == 0)
-        {
-            anim.SetTrigger("attackSlash");
+            rb.linearVelocity = Vector2.zero;
+            if (Time.time > lastAttackTime + attackCooldown)
+            {
+                StartCoroutine(AttackRoutine());
+            }
         }
         else
         {
-            anim.SetTrigger("attackSummon");
+            if (!isBusy)
+                rb.linearVelocity = new Vector2(facingDir * moveSpeed, rb.linearVelocity.y);
         }
     }
 
-    #endregion
+    private IEnumerator AttackRoutine()
+    {
+        isBusy = true;
+        currentState = BossState.Attacking;
+        lastAttackTime = Time.time;
 
-    #region Animation Events
+        // Random chiêu thức
+        if (Random.value > 0.5f) anim.SetTrigger("attackSlash");
+        else anim.SetTrigger("attackSummon");
 
-    // Called by Animation Event at the end of attack animations
+        yield return new WaitForSeconds(1.0f);
+    }
+
+    // Hàm này ĐỂ ANIMATION EVENT GỌI (nếu bạn dùng Event)
     public void FinishAttack()
     {
-        isPerformingAction = false;
+        isBusy = false;
         currentState = BossState.Chasing;
     }
 
-    // Called by Animation Event during slash attack
-    public void PerformSlashDamage()
+    // --- 5. HỆ THỐNG MÁU & CHẾT (QUAN TRỌNG) ---
+    public void TakeDamage(float damage)
     {
-        // Deal damage in front of boss
-        DamageTargets(attackDamage);
-        Debug.Log("Boss performs SLASH attack!");
+        if (isDead) return;
+
+        currentHealth -= damage;
+        StartCoroutine(FlashDamage());
+
+        // Cập nhật UI máu Boss ở đây nếu cần
+
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
     }
 
-    // Called by Animation Event during summon attack
-    public void PerformSummon()
+    private void Die()
     {
-        // Spawn minions or projectiles
-        Debug.Log("Boss performs SUMMON attack!");
-        // TODO: Implement summoning logic
+        isDead = true;
+        anim.SetTrigger("die");
+        rb.linearVelocity = Vector2.zero;
+        GetComponent<Collider2D>().enabled = false;
+
+        Debug.Log("YOU WIN!");
+        // Gọi UI chiến thắng
+        //UI.Instance.EnableVictoryUI();
+
+        this.enabled = false;
     }
 
-    #endregion
-
-    #region State Transitions
+    // --- 6. CÁC HÀM PHỤ TRỢ ---
+    private void Flip()
+    {
+        facingRight = !facingRight;
+        transform.Rotate(0f, 180f, 0f);
+        facingDir *= -1;
+    }
 
     private IEnumerator WakeUpSequence()
     {
-        isPerformingAction = true;
-        
-        // Play wake up animation if you have one
-        // anim.SetTrigger("wakeUp");
-        
-        yield return new WaitForSeconds(wakeUpDuration);
-        
+        yield return new WaitForSeconds(1.5f);
         currentState = BossState.Chasing;
-        isPerformingAction = false;
     }
 
-    #endregion
-
-    #region Death
-
-    protected override void Die()
+    private IEnumerator FlashDamage()
     {
-        if (currentState == BossState.Dead)
-            return;
-
-        currentState = BossState.Dead;
-        base.Die();
-
-        // Boss-specific death logic
-        Debug.Log("BOSS DEFEATED!");
-        
-        // Disable boss functionality
-        this.enabled = false;
-        rb.bodyType = RigidbodyType2D.Static;
-
-        // TODO: Trigger victory sequence, spawn rewards, etc.
+        if (sr && damageMaterial)
+        {
+            sr.material = damageMaterial;
+            yield return new WaitForSeconds(0.1f);
+            sr.material = originalMaterial;
+        }
     }
 
-    #endregion
-
-    #region Debug
-
-    protected override void OnDrawGizmos()
+    // Animation Event gọi cái này để gây damage
+    public void PerformSlashDamage()
     {
-        base.OnDrawGizmos();
+        Vector2 slashPos = (Vector2)transform.position + new Vector2(attackRadius * facingDir * 0.5f, 0);
+        // Code gây damage độc lập
+        Collider2D[] hits = Physics2D.OverlapCircleAll(slashPos, attackRadius);
 
-        // Draw attack range
+        System.Collections.Generic.List<GameObject> damagedObjects = new System.Collections.Generic.List<GameObject>();
+
+        foreach (var hit in hits)
+        {
+            // Nếu đánh trúng chính mình hoặc Minion của mình thì bỏ qua
+            if (hit.transform == transform || hit.CompareTag("Enemy")) continue;
+
+            // Nếu đối tượng này ĐÃ BỊ đánh trong đợt này rồi -> Bỏ qua (Fix lỗi đánh 2 lần)
+            if (damagedObjects.Contains(hit.gameObject)) continue;
+
+            // Kiểm tra xem có phải Player không (Theo Tag hoặc Component Entity)
+            Entity target = hit.GetComponent<Entity>();
+
+            // Nếu tìm thấy Entity trên đối tượng (hoặc cha của nó)
+            if (target != null)
+            {
+                target.TakeDamage(1); // Gây sát thương
+                damagedObjects.Add(hit.gameObject);
+                Debug.Log($"Boss chém trúng: {hit.name}");
+            }
+        }
+    }
+
+    public void PerformSummon()
+    {
+        if (minions.Length > 0 && summonPoints.Length > 0)
+        {
+            GameObject minionToSpawn = minions[Random.Range(0, minions.Length)];
+
+            Instantiate(minionToSpawn, summonPoints[0].position, Quaternion.identity);
+        }
+    }
+
+    protected virtual void OnDrawGizmos()
+    {
         Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, attackRange);
+        Gizmos.DrawLine(transform.position, transform.position + new Vector3(0, -groundCheckDistance));
+        if (attackPoint != null) Gizmos.DrawWireSphere(attackPoint.position, attackRadius);
     }
-
-    #endregion
 }

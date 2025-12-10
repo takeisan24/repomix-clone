@@ -27,8 +27,9 @@ public class Entity : MonoBehaviour
     protected bool facingRight = true;
     protected int facingDir=1;
     protected bool canMove = true;
+
     [Header("Collision details")]
-    [SerializeField] private float groundCheckDistance;
+    [SerializeField] protected float groundCheckDistance;
     protected bool isGrounded;
     [SerializeField] private LayerMask whatIsGround;
     protected virtual void Awake()
@@ -48,12 +49,33 @@ public class Entity : MonoBehaviour
         HandleAnimation();
     }
 
-    public void DamageTargets(float damage)
+    public virtual void DamageTargets(float damage)
     {
-        Collider2D[] enemyColliders=Physics2D.OverlapCircleAll(attackPoint.position, attackRadius, whatIsTarget);
+        if (attackPoint == null)
+        {
+            Debug.LogError(gameObject.name + ": Chưa gán Attack Point! Hãy kiểm tra Inspector.");
+            return; // Dừng hàm lại ngay lập tức, không chạy tiếp để tránh lỗi
+        };
+
+        Collider2D[] enemyColliders = Physics2D.OverlapCircleAll(attackPoint.position, attackRadius, whatIsTarget);
         foreach (Collider2D enemy in enemyColliders)
         {
-            enemy.GetComponent<Entity>().TakeDamage(damage);
+            //enemy.GetComponent<Entity>().TakeDamage(damage);
+            // 1. Thử tìm Entity (Cho Goblin, Mushroom...)
+            Entity entityScript = enemy.GetComponent<Entity>();
+            if (entityScript != null)
+            {
+                entityScript.TakeDamage(damage);
+            }
+            // 2. Thử tìm BOSS (Cho con Boss độc lập của bạn) <-- THÊM ĐOẠN NÀY
+            else
+            {
+                Boss bossScript = enemy.GetComponent<Boss>();
+                if (bossScript != null)
+                {
+                    bossScript.TakeDamage(damage);
+                }
+            }
         }
     }
     public virtual void TakeDamage(float damage)

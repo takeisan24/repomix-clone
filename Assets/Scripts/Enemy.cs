@@ -4,17 +4,19 @@ using UnityEngine;
 public class Enemy : Entity
 {
     private bool playerDectected;
+    private bool playerShieldDetected;
     [Header("Movement details")]
     [SerializeField] protected float speed = 5f;
-    protected override void     Update()
+    protected override void Update()
     {
         base.Update();
         HandleAttack();
     }
     protected override void HandleAttack()
     {
-        if(playerDectected)
+        if (playerDectected||playerShieldDetected)
         {
+            AudioManager.Instance.Play("sword");
             anim.SetTrigger("attack");
         }
     }
@@ -22,6 +24,8 @@ public class Enemy : Entity
     {
         base.HandleCollision();
         playerDectected = Physics2D.OverlapCircle(transform.position, attackRadius, whatIsTarget);
+        playerShieldDetected = Physics2D.OverlapCircle(transform.position, attackRadius, LayerMask.GetMask("PlayerShield"));
+
     }
     protected override void HandleMovement()
     {
@@ -36,6 +40,7 @@ public class Enemy : Entity
     }
     protected override void Die()
     {
+        AudioManager.Instance.Play("enemyDie");
         base.Die();
         UI.Instance.UpdateKillCount();
     }

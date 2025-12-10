@@ -11,7 +11,8 @@ GameObject:
   - component: {fileID: 2144094865981743335}
   - component: {fileID: 2890880126297221619}
   - component: {fileID: 8402565959366964305}
-  m_Layer: 0
+  - component: {fileID: 3315848698226361144}
+  m_Layer: 7
   m_Name: Animator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -113,6 +114,18 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!114 &3315848698226361144
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2210251147584004961}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 106d6b4f38f35914da55f6d29f88522a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Boss_AnimationEvents
 --- !u!1 &3659667411342857924
 GameObject:
   m_ObjectHideFlags: 0
@@ -122,7 +135,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1624824481978122300}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: AttackPoint
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -138,7 +151,7 @@ Transform:
   m_GameObject: {fileID: 3659667411342857924}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.75, y: -0.83, z: 0}
+  m_LocalPosition: {x: 0.19, y: -0.2, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -156,7 +169,7 @@ GameObject:
   - component: {fileID: 2079293867213299813}
   - component: {fileID: 2423795597419972411}
   - component: {fileID: 5609059454448174732}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Boss
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -172,7 +185,7 @@ Transform:
   m_GameObject: {fileID: 5286682572695991896}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -6.64, y: -2.15, z: 0}
+  m_LocalPosition: {x: -6.64, y: -1.97, z: 0}
   m_LocalScale: {x: 1.2, y: 1.2, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -192,25 +205,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5177c9364ca37f9429caf04475c37550, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Boss
-  maxHealth: 500
-  currentHealth: 200
+  maxHealth: 10
+  currentHealth: 0
   damageMaterial: {fileID: 2100000, guid: f0222d3bea2a0e24994bf0df402d571d, type: 2}
   damageFeedbackDuration: 0.1
-  attackRadius: 1.5
+  moveSpeed: 3
+  playerTransform: {fileID: 0}
+  groundCheckDistance: 0
+  whatIsGround:
+    serializedVersion: 2
+    m_Bits: 64
+  attackRadius: 5
+  attackCooldown: 3
   attackPoint: {fileID: 1624824481978122300}
   whatIsTarget:
     serializedVersion: 2
     m_Bits: 256
   attackDamage: 1
-  groundCheckDistance: 0
-  whatIsGround:
-    serializedVersion: 2
-    m_Bits: 64
-  speed: 2
-  attackRange: 5
-  attackCooldown: 3
-  wakeUpDuration: 1.5
-  playerTransform: {fileID: 0}
+  minions:
+  - {fileID: 4437261238638420188, guid: 5951b5c3e264e344f95093ef1344ddae, type: 3}
+  - {fileID: 3000399083352073935, guid: 96e1479bb8772ec4cb6818f9b9ede12a, type: 3}
+  - {fileID: 7897884056642558429, guid: 3b9ca40cdd9d7ff40916c1c8732fb1ab, type: 3}
+  summonPoints:
+  - {fileID: 7591364683692574377, guid: 19be1950136567e42afef39e6971e005, type: 3}
 --- !u!50 &2423795597419972411
 Rigidbody2D:
   serializedVersion: 5
@@ -272,6 +289,6 @@ CapsuleCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0.365626, y: 0.29054242}
-  m_Size: {x: 4.478228, y: 6.2572865}
+  m_Offset: {x: -0.09718855, y: -0.63004255}
+  m_Size: {x: 1.87457, y: 3.6237168}
   m_Direction: 0

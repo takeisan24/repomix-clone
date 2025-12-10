@@ -13,5 +13,10 @@ public class Player_AnimationEvent : Entity_AnimationEvents
     public void DamageTargetsByChargeAttack()
     {
         player.DamegeTargetsByChargeAttack();
+        if (player.IsUpdatedChargeAttack())
+        {
+            Debug.Log("Shoot Charge Attack Bullet");
+            player.ShootChargeAttackBullet();
+        }
     }
 }
