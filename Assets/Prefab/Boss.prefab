@@ -205,11 +205,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5177c9364ca37f9429caf04475c37550, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Boss
-  maxHealth: 10
+  maxHealth: 70
   currentHealth: 0
   damageMaterial: {fileID: 2100000, guid: f0222d3bea2a0e24994bf0df402d571d, type: 2}
   damageFeedbackDuration: 0.1
-  moveSpeed: 3
+  moveSpeed: 2
   playerTransform: {fileID: 0}
   groundCheckDistance: 0
   whatIsGround:

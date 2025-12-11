@@ -57,6 +57,60 @@ public class Boss : MonoBehaviour
 
         currentHealth = maxHealth;
         currentState = BossState.WakingUp;
+
+        // find nearest target matching whatIsTarget if not assigned
+        if (playerTransform == null)
+        {
+            float minDistSqr = float.MaxValue;
+            Transform nearest = null;
+
+            // Prefer Entity components when available
+            var entities = GameObject.FindObjectsOfType<Entity>();
+            for (int i = 0; i < entities.Length; i++)
+            {
+                var e = entities[i];
+                if (e == null || e.gameObject == null || e.gameObject == this.gameObject) continue;
+                int layer = e.gameObject.layer;
+                if ((whatIsTarget.value & (1 << layer)) == 0) continue;
+
+                float d2 = (e.transform.position - transform.position).sqrMagnitude;
+                if (d2 < minDistSqr)
+                {
+                    minDistSqr = d2;
+                    nearest = e.transform;
+                }
+            }
+
+            // fallback: search all transforms
+            if (nearest == null)
+            {
+                var all = GameObject.FindObjectsOfType<Transform>();
+                for (int i = 0; i < all.Length; i++)
+                {
+                    var t = all[i];
+                    if (t == null || t.gameObject == this.gameObject) continue;
+                    int layer = t.gameObject.layer;
+                    if ((whatIsTarget.value & (1 << layer)) == 0) continue;
+
+                    float d2 = (t.position - transform.position).sqrMagnitude;
+                    if (d2 < minDistSqr)
+                    {
+                        minDistSqr = d2;
+                        nearest = t;
+                    }
+                }
+            }
+
+            if (nearest != null)
+            {
+                playerTransform = nearest;
+            }
+            else
+            {
+                Debug.LogWarning("Boss: no target found matching whatIsTarget LayerMask.", this);
+            }
+        }
+
         StartCoroutine(WakeUpSequence());
     }
 
@@ -157,6 +211,7 @@ public class Boss : MonoBehaviour
         //UI.Instance.EnableVictoryUI();
 
         this.enabled = false;
+        Destroy(gameObject, 1f);
     }
 
     // --- 6. CÁC HÀM PHỤ TRỢ ---

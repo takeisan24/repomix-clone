@@ -107,7 +107,7 @@ public class Entity : MonoBehaviour
         col.enabled = false;
         rb.gravityScale = 12;
         rb.linearVelocity = new Vector2(rb.linearVelocityY,15);
-        Destroy(gameObject, 3f);
+        Destroy(gameObject, 1f);
     }
 
     public virtual void EnableMovementAndJump(bool enable)
@@ -157,6 +157,42 @@ public class Entity : MonoBehaviour
     protected virtual void HandleCollision()
     {
         isGrounded=Physics2D.Raycast(transform.position, Vector2.down, groundCheckDistance, whatIsGround);
+    }
+    protected virtual void FindNearestTarget()
+    {
+        // Use attackRadius as base detection radius (fallback to 5 if zero)
+        float detectionRadius = 999;
+
+        Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, detectionRadius, whatIsTarget);
+        if (hits == null || hits.Length == 0) return;
+
+        Transform nearest = null;
+        float minDistSqr = float.MaxValue;
+        Vector2 pos = transform.position;
+
+        foreach (var c in hits)
+        {
+            if (c == null || c.gameObject == gameObject) continue;
+            Vector2 otherPos = c.transform.position;
+            float d2 = (otherPos - pos).sqrMagnitude;
+            if (d2 < minDistSqr)
+            {
+                minDistSqr = d2;
+                nearest = c.transform;
+            }
+        }
+
+        if (nearest == null) return;
+
+        // Face the nearest target
+        if (nearest.position.x > transform.position.x && !facingRight)
+        {
+            Flip();
+        }
+        else if (nearest.position.x < transform.position.x && facingRight)
+        {
+            Flip();
+        }
     }
     protected virtual void OnDrawGizmos()
     {

@@ -187,8 +187,20 @@ public class Player : Entity
         Collider2D[] enemyColliders = Physics2D.OverlapCircleAll(attackPoint.position, attackRadius, whatIsTarget);
         foreach (Collider2D enemy in enemyColliders)
         {
-            enemy.GetComponent<Entity>().TakeDamage(damage);
-            if(canRestoreHpByAttack)
+            Entity entityScript = enemy.GetComponent<Entity>();
+            if (entityScript != null)
+            {
+                entityScript.TakeDamage(chargeAttackDamage);
+            }
+            else
+            {
+                Boss bossScript = enemy.GetComponent<Boss>();
+                if (bossScript != null)
+                {
+                    bossScript.TakeDamage(chargeAttackDamage);
+                }
+            }
+            if (canRestoreHpByAttack)
             {
                 Debug.Log("Restoring HP by attack");
                 RestoreHpByAttack(damage);
@@ -260,7 +272,19 @@ public class Player : Entity
         Collider2D[] enemyColliders = Physics2D.OverlapCircleAll(attackPoint.position, chargeAttackRadius, whatIsTarget);
         foreach (Collider2D enemy in enemyColliders)
         {
-            enemy.GetComponent<Entity>().TakeDamage(chargeAttackDamage);
+            Entity entityScript = enemy.GetComponent<Entity>();
+            if (entityScript != null)
+            {
+                entityScript.TakeDamage(chargeAttackDamage);
+            }
+            else
+            {
+                Boss bossScript = enemy.GetComponent<Boss>();
+                if (bossScript != null)
+                {
+                    bossScript.TakeDamage(chargeAttackDamage);
+                }
+            }
             if (canRestoreHpByAttack)
             {
                 RestoreHpByAttack(chargeAttackDamage);
@@ -316,6 +340,7 @@ public class Player : Entity
     public void UpdateChargeAttacke(bool update)
     {
         isUpdatedChargeAttack = update;
+        chargeAttackStaminaCost+=15;
     }
     public void setBloodthirsty(bool enable)
     {

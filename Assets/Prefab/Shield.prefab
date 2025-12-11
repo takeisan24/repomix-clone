@@ -104,8 +104,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51b2951eb776c9e47904314881af4e3c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Shield
-  damage: 2
-  damageOverTime: 1
+  damage: 8
+  damageOverTime: 0
   damageInterval: 0.75
 --- !u!58 &3546503316839072666
 CircleCollider2D:

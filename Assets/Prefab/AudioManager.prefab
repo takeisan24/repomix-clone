@@ -1,0 +1,107 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &4650598151114088731
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6730648486226213782}
+  - component: {fileID: 5791898474392019287}
+  m_Layer: 0
+  m_Name: AudioManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6730648486226213782
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4650598151114088731}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.35021, y: -0.01854, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5791898474392019287
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4650598151114088731}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0c00e0726b62d714b867442349cf5a90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioManager
+  sounds:
+  - name: boomerang
+    clip: {fileID: 8300000, guid: 20a90623932e7ec4db9d62c54147e5f3, type: 3}
+    volume: 0.5
+    loop: 0
+  - name: attack1
+    clip: {fileID: 8300000, guid: df5eaa522a307f449b25e8ccafd8c731, type: 3}
+    volume: 0.5
+    loop: 0
+  - name: attack2
+    clip: {fileID: 8300000, guid: 5cb014996efb5404c941bb1a8e2e3abf, type: 3}
+    volume: 0.5
+    loop: 0
+  - name: attack3
+    clip: {fileID: 8300000, guid: b7d392fb9bc889547a6b835fcf4a4a25, type: 3}
+    volume: 0.5
+    loop: 0
+  - name: enemyDie
+    clip: {fileID: 8300000, guid: 3c37695f8edd3ab419b176d87059fc5e, type: 3}
+    volume: 0.1
+    loop: 0
+  - name: explosion
+    clip: {fileID: 8300000, guid: 4ba91f290edc25d49bf4523c469efa42, type: 3}
+    volume: 0.13
+    loop: 0
+  - name: heavyAttack
+    clip: {fileID: 8300000, guid: 9574c512719c35449b5e60556f7b3768, type: 3}
+    volume: 0.5
+    loop: 0
+  - name: hit1
+    clip: {fileID: 8300000, guid: db69a8104b8455240b1206a91ed2dd66, type: 3}
+    volume: 0.5
+    loop: 0
+  - name: hit2
+    clip: {fileID: 8300000, guid: 3776dafdf69bd814aa7e5d230922b86e, type: 3}
+    volume: 0.5
+    loop: 0
+  - name: hit3
+    clip: {fileID: 8300000, guid: c88aee9f1aa37fb4397c85f02a315963, type: 3}
+    volume: 0.5
+    loop: 0
+  - name: lightningStrike
+    clip: {fileID: 8300000, guid: 9cb34c8818751684782d96a27d352bd4, type: 3}
+    volume: 0.5
+    loop: 0
+  - name: sword
+    clip: {fileID: 8300000, guid: 4382c0cd9eda42848a62362de9926c5a, type: 3}
+    volume: 0.5
+    loop: 0
+  - name: warriorDie
+    clip: {fileID: 8300000, guid: 75c8c9b42c0362548a08b50440ec6cd1, type: 3}
+    volume: 0.5
+    loop: 0
+  - name: swordSwing
+    clip: {fileID: 8300000, guid: b03aa8cbe3ea0fe4a8b41f170f3c509c, type: 3}
+    volume: 0.5
+    loop: 0
+  - name: princessDie
+    clip: {fileID: 8300000, guid: 4b4ca21d7d9c10940843340c43fa658e, type: 3}
+    volume: 0.5
+    loop: 0

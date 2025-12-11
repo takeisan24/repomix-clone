@@ -89,5 +89,12 @@ public class Shield : MonoBehaviour
             ent = rb.GetComponent<Entity>();
             if (ent != null) ent.TakeDamage(damage);
         }
+
+        Boss bossScript = otherObj.GetComponent<Boss>();
+        if (bossScript != null)
+        {
+            bossScript.TakeDamage(damage);
+            return;
+        }
     }
 }

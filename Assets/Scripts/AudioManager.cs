@@ -32,7 +32,10 @@ public class AudioManager : MonoBehaviour
             source.clip = s.clip;
             source.volume = s.volume;
             source.loop = s.loop;
-
+            if (s.name == "boomerang")
+            {
+                source.pitch = 2.2f;
+            }
             soundMap.Add(s.name, source);
         }
     }
@@ -40,8 +43,9 @@ public class AudioManager : MonoBehaviour
     public void Play(string name)
     {
         if (soundMap.TryGetValue(name, out var src))
-            src.Play();
+            src.PlayOneShot(src.clip, src.volume);
     }
+
 
     public void Stop(string name)
     {

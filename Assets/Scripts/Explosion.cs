@@ -15,10 +15,18 @@ public class Explosion : MonoBehaviour
         Collider2D[] targets = Physics2D.OverlapCircleAll(transform.position, col.bounds.extents.x, whatIsTarget);
         foreach (Collider2D target in targets)
         {
-            Entity entity = target.GetComponent<Entity>();
-            if (entity != null)
+            Entity entityScript = target.GetComponent<Entity>();
+            if (entityScript != null)
             {
-                entity.TakeDamage(explosionDamage);
+                entityScript.TakeDamage(explosionDamage);
+            }
+            else
+            {
+                Boss bossScript = target.GetComponent<Boss>();
+                if (bossScript != null)
+                {
+                    bossScript.TakeDamage(explosionDamage);
+                }
             }
         }
     }

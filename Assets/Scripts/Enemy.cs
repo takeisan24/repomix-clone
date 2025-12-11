@@ -1,3 +1,4 @@
+using System;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -10,13 +11,14 @@ public class Enemy : Entity
     protected override void Update()
     {
         base.Update();
+        FindNearestTarget();
         HandleAttack();
     }
+
     protected override void HandleAttack()
     {
         if (playerDectected||playerShieldDetected)
         {
-            AudioManager.Instance.Play("sword");
             anim.SetTrigger("attack");
         }
     }
@@ -36,6 +38,14 @@ public class Enemy : Entity
         else
         {
             rb.linearVelocity = new Vector2(0, rb.linearVelocityY);
+        }
+    }
+    public override void EnableMovementAndJump(bool enable)
+    {
+        base.EnableMovementAndJump(enable);
+        if (!enable)
+        {
+            AudioManager.Instance.Play("sword");
         }
     }
     protected override void Die()

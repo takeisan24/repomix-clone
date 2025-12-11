@@ -1,9 +1,12 @@
-using System;
 using UnityEngine;
 
 public class Enemy_Respawner : MonoBehaviour
 {
-    [SerializeField] private GameObject enemyPrefab;
+    [SerializeField] private GameObject enemy1Prefab;
+    [SerializeField] private GameObject enemy2Prefab;
+    [SerializeField] private GameObject enemy3Prefab;
+    private GameObject[] enemyPrefabs;
+    [SerializeField] private GameObject bossPrefab;
     [SerializeField] private Transform[] spawnPoint;
     [SerializeField] private float initialCooldown;
     private float cooldown;
@@ -31,38 +34,42 @@ public class Enemy_Respawner : MonoBehaviour
     private void Awake()
     {
         cooldown = initialCooldown;
+        enemyPrefabs = new GameObject[] { enemy1Prefab, enemy2Prefab, enemy3Prefab };
     }
 
     private void Update()
     {
-        // determine how many have been spawned for this level and max allowed
-        int spawned = GetSpawnedForCurrentLevel();
-        int maxForLevel = GetMaxForCurrentLevel();
+        if (currentLevel != GameManager.Level.NONE)
+        {
+            // determine how many have been spawned for this level and max allowed
+            int spawned = GetSpawnedForCurrentLevel();
+            int maxForLevel = GetMaxForCurrentLevel();
 
-        // if we still need to spawn more this level, proceed with cooldown-based spawning
-        if (spawned < maxForLevel && canSpawn)
-        {
-            timer += Time.deltaTime;
-            if (timer >= cooldown)
+            // if we still need to spawn more this level, proceed with cooldown-based spawning
+            if (spawned < maxForLevel && canSpawn)
             {
-                timer = 0f;
-                CreateNewEnemy();
-                cooldown = Mathf.Max(minCooldown, cooldown - cooldownDecreaseRate);
-            }
-        }
-        else if (spawned >= maxForLevel)
-        {
-            // we've already spawned the required number — wait until all active enemies are killed
-            int active = CountActiveEnemiesInScene();
-            if (active <= 0)
-            {
-                // all spawned enemies have been killed — stop spawning for this level
-                canSpawn = false;
-                if(!levelCleared)
+                timer += Time.deltaTime;
+                if (timer >= cooldown)
                 {
-                    levelCleared = true;
-                    // notify GameManager that level is cleared
-                    GameManager.Instance.OnLevelCleared();
+                    timer = 0f;
+                    CreateNewEnemy();
+                    cooldown = Mathf.Max(minCooldown, cooldown - cooldownDecreaseRate);
+                }
+            }
+            else if (spawned >= maxForLevel)
+            {
+                // we've already spawned the required number — wait until all active enemies are killed
+                int active = CountActiveEnemiesInScene();
+                if (active <= 0)
+                {
+                    // all spawned enemies have been killed — stop spawning for this level
+                    canSpawn = false;
+                    if (!levelCleared)
+                    {
+                        levelCleared = true;
+                        // notify GameManager that level is cleared
+                        GameManager.Instance.OnLevelCleared();
+                    }
                 }
             }
         }
@@ -105,6 +112,9 @@ public class Enemy_Respawner : MonoBehaviour
             if (e != null && e.gameObject != null && e.gameObject.layer == enemyLayer)
                 count++;
         }
+        var boss = GameObject.FindFirstObjectByType<Boss>();
+        if (boss != null && boss.gameObject.layer == enemyLayer)
+            count++;
         return count;
     }
 
@@ -115,27 +125,43 @@ public class Enemy_Respawner : MonoBehaviour
         int maxForLevel = GetMaxForCurrentLevel();
         if (spawned >= maxForLevel) return;
 
-        int respawnIndex = UnityEngine.Random.Range(0, spawnPoint.Length);
+        int respawnIndex = Random.Range(0, spawnPoint.Length);
         Vector3 spawnPos = spawnPoint[respawnIndex].position;
-        GameObject newEnemy = Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
-        if (player != null && newEnemy.transform.position.x > player.transform.position.x)
-            newEnemy.GetComponent<Entity>()?.Flip();
+        //if (player != null && newEnemy.transform.position.x > player.transform.position.x)
+        //    newEnemy.GetComponent<Entity>()?.Flip();
 
         // increment counters for current level
         switch (currentLevel)
         {
             case GameManager.Level.FIRST:
+                Instantiate(enemy1Prefab, spawnPos, Quaternion.identity);
                 spawnedFirst++;
                 break;
             case GameManager.Level.SECOND:
-                spawnedSecond++;
-                break;
+                {
+                    int random = Random.Range(0f, 1f) < 0.65f ? 0 : 1;
+                    Instantiate(enemyPrefabs[random], spawnPos, Quaternion.identity);
+                    spawnedSecond++;
+                    break;
+                }
             case GameManager.Level.THIRD:
-                spawnedThird++;
-                break;
+                {
+                    int random = Random.Range(0f, 1f) < 0.55f ? 0 : (Random.Range(0f, 1f) < 0.6f ? 1 : 2);
+                    Instantiate(enemyPrefabs[random], spawnPos, Quaternion.identity);
+                    spawnedThird++;
+                    break;
+                }
             case GameManager.Level.FOURTH:
-                spawnedFourth++;
-                break;
+                {
+                    int random = Random.Range(0f, 1f) < 0.45f ? 0 : (Random.Range(0f, 1f) < 0.5f ? 1 : 2);
+                    Instantiate(enemyPrefabs[random], spawnPos, Quaternion.identity);
+                    if (spawnedFourth == GetMaxForCurrentLevel() - 1)
+                    {
+                        Instantiate(bossPrefab, spawnPoint[Random.Range(0, spawnPoint.Length)].position, Quaternion.identity);
+                    }
+                    spawnedFourth++;
+                    break;
+                }
             default:
                 break;
         }

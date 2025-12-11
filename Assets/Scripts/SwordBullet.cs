@@ -14,10 +14,18 @@ public class SwordBullet : MonoBehaviour
     {
         if (collision.gameObject.layer == LayerMask.NameToLayer("Enemy"))
         {
-            Entity enemy = collision.GetComponent<Entity>();
-            if (enemy != null)
+            Entity entityScript = collision.GetComponent<Entity>();
+            if (entityScript != null)
             {
-                enemy.TakeDamage(damage);
+                entityScript.TakeDamage(damage);
+            }
+            else
+            {
+                Boss bossScript = collision.GetComponent<Boss>();
+                if (bossScript != null)
+                {
+                    bossScript.TakeDamage(damage);
+                }
             }
         }
     }

@@ -8,6 +8,7 @@ public class Mushroom : Entity
     protected override void Update()
     {
         base.Update();
+        FindNearestTarget();
         HandleAttack();
     }
     protected override void HandleAttack()

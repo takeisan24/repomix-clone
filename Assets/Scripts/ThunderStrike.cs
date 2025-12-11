@@ -18,10 +18,18 @@ public class ThunderStrike : MonoBehaviour
         Collider2D[] hitColliders = Physics2D.OverlapBoxAll(col.bounds.center, col.bounds.size, 0f, LayerMask.GetMask("Enemy"));
         foreach (Collider2D hitCollider in hitColliders)
         {
-            Entity enemy = hitCollider.GetComponent<Entity>();
-            if (enemy != null)
+            Entity entityScript = hitCollider.GetComponent<Entity>();
+            if (entityScript != null)
             {
-                enemy.TakeDamage(damage);
+                entityScript.TakeDamage(damage);
+            }
+            else
+            {
+                Boss bossScript = hitCollider.GetComponent<Boss>();
+                if (bossScript != null)
+                {
+                    bossScript.TakeDamage(damage);
+                }
             }
         }
     }
